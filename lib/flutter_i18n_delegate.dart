@@ -31,18 +31,32 @@ class FlutterI18nDelegate extends LocalizationsDelegate<FlutterI18n> {
     MessagePrinter.info("New locale: $locale");
     final TranslationLoader translationLoader =
         _translationObject!.translationLoader!;
-    if (translationLoader.locale != locale ||
-        _translationObject!.decodedMap == null ||
-        _translationObject!.decodedMap!.isEmpty) {
-      translationLoader.locale = currentLocale = locale;
+    
+    // Set the locale passed in by system (if it is forcedLocale，getter will return forcedLocale)
+    translationLoader.locale = locale;
+    
+    // Obtain the actual effective locale (consider forcedLocale).
+    final Locale effectiveLocale = translationLoader.locale!;
+    
+    // Check whether it need to load：
+    // 1. The data is empty
+    // 2. The actual locale is different from the last one
+    final bool needsLoad = _translationObject!.decodedMap == null ||
+        _translationObject!.decodedMap!.isEmpty ||
+        translationLoader.loadedLocale != effectiveLocale;
+    
+    if (needsLoad) {
       await _translationObject!.load();
+      translationLoader.markAsLoaded();
     }
+    
+    currentLocale = effectiveLocale;
     return _translationObject!;
   }
 
   @override
   bool shouldReload(final FlutterI18nDelegate old) {
     return currentLocale == null ||
-        currentLocale == old.currentLocale;
+        currentLocale != old.currentLocale;
   }
 }
