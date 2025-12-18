@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_i18n/loaders/decoders/base_decode_strategy.dart';
@@ -65,7 +64,7 @@ class FileTranslationLoader extends TranslationLoader implements IFileContent {
   @override
   Future<String> loadString(final String fileName, final String extension) {
     return assetBundle.loadString('$basePath/$fileName.$extension',
-        cache: !kDebugMode);
+        cache: false);
   }
 
   Future<Map<dynamic, dynamic>> _loadTranslation(String fileName, bool isFallback) async {
