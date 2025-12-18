@@ -8,7 +8,9 @@ class I18nPlural extends StatelessWidget {
   final Text child;
   static const _defaultText = Text("");
 
-  const I18nPlural(this._key, this._pluralValue, {Key? key, this.child = _defaultText}): super(key: key);
+  const I18nPlural(this._key, this._pluralValue,
+      {Key? key, this.child = _defaultText})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {

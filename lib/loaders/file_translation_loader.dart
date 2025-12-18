@@ -68,7 +68,8 @@ class FileTranslationLoader extends TranslationLoader implements IFileContent {
         cache: !kDebugMode);
   }
 
-  Future<Map<dynamic, dynamic>> _loadTranslation(String fileName, bool isFallback) async {
+  Future<Map<dynamic, dynamic>> _loadTranslation(
+      String fileName, bool isFallback) async {
     try {
       return await loadFile(fileName);
     } catch (e) {

@@ -54,8 +54,9 @@ class MyHomePage extends StatefulWidget {
 class MyHomeState extends State<MyHomePage> {
   changeLanguage() async {
     final currentLang = FlutterI18n.currentLocale(context)!;
-    final nextLang =
-        currentLang.languageCode == 'ua' ? const Locale('en') : const Locale('ua');
+    final nextLang = currentLang.languageCode == 'ua'
+        ? const Locale('en')
+        : const Locale('ua');
     await FlutterI18n.refresh(context, nextLang);
     setState(() {});
   }

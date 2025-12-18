@@ -54,8 +54,7 @@ class PluralTranslator extends SimpleTranslator {
 
   String? _findParameterName(final Map<dynamic, dynamic> decodedSubMap) {
     String? parameterName = "";
-    final String? translation =
-        decodedSubMap[key.split(keySeparator!).last];
+    final String? translation = decodedSubMap[key.split(keySeparator!).last];
     if (translation != null && _parameterRegexp.hasMatch(translation)) {
       final Match match = _parameterRegexp.firstMatch(translation)!;
       parameterName = match.groupCount > 0 ? match.group(1)! : "";
