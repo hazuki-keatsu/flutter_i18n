@@ -327,3 +327,9 @@ Upgrade packages
 
 Upgrade tom@0.17.0, http@1.5.0, removed pedantic
 Fixed linting issues
+
+## [0.37.1]
+
+Upgrade http@1.6.0
+Fixed formatting
+Fix for #238
