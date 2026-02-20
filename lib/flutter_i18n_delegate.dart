@@ -11,7 +11,7 @@ class FlutterI18nDelegate extends LocalizationsDelegate<FlutterI18n> {
   Locale? currentLocale;
 
   FlutterI18nDelegate(
-      {translationLoader,
+      {TranslationLoader? translationLoader,
       MissingTranslationHandler? missingTranslationHandler,
       String keySeparator = "."}) {
     _translationObject = FlutterI18n(
@@ -42,7 +42,6 @@ class FlutterI18nDelegate extends LocalizationsDelegate<FlutterI18n> {
 
   @override
   bool shouldReload(final FlutterI18nDelegate old) {
-    return this.currentLocale == null ||
-        this.currentLocale == old.currentLocale;
+    return currentLocale == null || currentLocale != old.currentLocale;
   }
 }

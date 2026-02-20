@@ -322,3 +322,14 @@ Fix for #216
 ## [0.36.3]
 
 Upgrade packages
+
+## [0.37.0]
+
+Upgrade tom@0.17.0, http@1.5.0, removed pedantic
+Fixed linting issues
+
+## [0.37.1]
+
+Upgrade http@1.6.0
+Fixed formatting
+Fix for #238

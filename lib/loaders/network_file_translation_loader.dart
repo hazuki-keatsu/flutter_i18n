@@ -11,7 +11,7 @@ class NetworkFileTranslationLoader extends FileTranslationLoader {
   final Uri baseUri;
 
   NetworkFileTranslationLoader(
-      {required Uri this.baseUri,
+      {required this.baseUri,
       Locale? forcedLocale,
       String fallbackFile = "en",
       String separator = "_",
@@ -33,6 +33,6 @@ class NetworkFileTranslationLoader extends FileTranslationLoader {
 
   Uri resolveUri(final String fileName, final String extension) {
     final fileToFind = '$fileName.$extension';
-    return this.baseUri.replace(path: '${this.baseUri.path}/$fileToFind');
+    return baseUri.replace(path: '${baseUri.path}/$fileToFind');
   }
 }

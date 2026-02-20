@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_i18n/loaders/decoders/base_decode_strategy.dart';
 import 'package:flutter_i18n/loaders/file_translation_loader.dart';
@@ -8,13 +7,12 @@ import 'package:flutter_i18n/utils/message_printer.dart';
 class NamespaceFileTranslationLoader extends FileTranslationLoader {
   final String fallbackDir;
   final List<String>? namespaces;
-  AssetBundle assetBundle = rootBundle;
 
-  Map<dynamic, dynamic> _decodedMap = {};
+  final Map<dynamic, dynamic> _decodedMap = {};
 
   NamespaceFileTranslationLoader(
-      {required List<String>? this.namespaces,
-      String this.fallbackDir = "en",
+      {required this.namespaces,
+      this.fallbackDir = "en",
       String basePath = "assets/flutter_i18n",
       String separator = "_",
       Locale? forcedLocale,
@@ -25,13 +23,14 @@ class NamespaceFileTranslationLoader extends FileTranslationLoader {
             forcedLocale: forcedLocale,
             decodeStrategies: decodeStrategies) {
     assert(namespaces != null);
-    assert(namespaces!.length > 0);
+    assert(namespaces!.isNotEmpty);
   }
 
   /// Return the translation Map for the namespace
+  @override
   Future<Map> load() async {
-    this.locale = locale ?? await findDeviceLocale();
-    MessagePrinter.info("The current locale is ${this.locale}");
+    locale = locale ?? await findDeviceLocale();
+    MessagePrinter.info("The current locale is $locale");
 
     await Future.wait(
         namespaces!.map((namespace) => _loadTranslation(namespace)));
@@ -40,7 +39,7 @@ class NamespaceFileTranslationLoader extends FileTranslationLoader {
   }
 
   Future<void> _loadTranslation(String namespace) async {
-    _decodedMap[namespace] = Map();
+    _decodedMap[namespace] = {};
 
     try {
       _decodedMap[namespace] =

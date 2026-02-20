@@ -1,22 +1,21 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_i18n/flutter_i18n.dart';
 
-/// Widget for simple text translation
-class I18nText extends StatelessWidget {
+/// Widget for plural text translation
+class I18nPlural extends StatelessWidget {
   final String _key;
+  final int _pluralValue;
   final Text child;
-  final String? fallbackKey;
-  final Map<String, String>? translationParams;
-  static const _default_text = Text("");
+  static const _defaultText = Text("");
 
-  I18nText(this._key,
-      {this.child = _default_text, this.fallbackKey, this.translationParams});
+  const I18nPlural(this._key, this._pluralValue,
+      {Key? key, this.child = _defaultText})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Text(
-      FlutterI18n.translate(context, _key,
-          fallbackKey: fallbackKey, translationParams: translationParams),
+      FlutterI18n.plural(context, _key, _pluralValue),
       key: child.key,
       style: child.style,
       strutStyle: child.strutStyle,

@@ -53,8 +53,9 @@ class MyHomePage extends StatefulWidget {
 class MyHomeState extends State<MyHomePage> {
   changeLanguage() async {
     final currentLang = FlutterI18n.currentLocale(context)!;
-    final nextLang =
-        currentLang.languageCode == 'ua' ? const Locale('en') : const Locale('ua');
+    final nextLang = currentLang.languageCode == 'ua'
+        ? const Locale('en')
+        : const Locale('ua');
     await FlutterI18n.refresh(context, nextLang);
     setState(() {});
   }
@@ -69,8 +70,8 @@ class MyHomeState extends State<MyHomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              I18nText("home.label.main", child: const Text("")),
-              I18nText("home.missing", child: const Text("")),
+              I18nText("home.label.main", child: Text("")),
+              I18nText("home.missing", child: Text("")),
               ElevatedButton(
                   onPressed: () async {
                     await changeLanguage();
