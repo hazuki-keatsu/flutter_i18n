@@ -17,15 +17,11 @@ class NamespaceFileTranslationLoader extends FileTranslationLoader {
       String this.fallbackDir = "en",
       String basePath = "assets/flutter_i18n",
       String separator = "_",
-      bool useCountryCode = false,
-      bool useScriptCode = false,
       Locale? forcedLocale,
       List<BaseDecodeStrategy>? decodeStrategies})
       : super(
             basePath: basePath,
             separator: separator,
-            useCountryCode: useCountryCode,
-            useScriptCode: useScriptCode,
             forcedLocale: forcedLocale,
             decodeStrategies: decodeStrategies) {
     assert(namespaces != null);

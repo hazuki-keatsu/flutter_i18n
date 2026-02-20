@@ -11,7 +11,6 @@ void main() {
     var instance = TestJsonLoader();
     expect(instance.fallbackFile, "en");
     expect(instance.basePath, isNotNull);
-    expect(instance.useCountryCode, isFalse);
   });
 
   test('should load correct map', () async {
@@ -71,7 +70,7 @@ void main() {
 
   test('`load` should load correct map from JSON with initial values',
       () async {
-    final instance = TestJsonLoader();
+    final instance = TestJsonLoader(forcedLocale: Locale("en"));
     final result = await instance.load();
     expect(result["fileName"], "en");
     expect(result["extension"], "json");
@@ -79,7 +78,7 @@ void main() {
 
   test('`load` should load correct map from YAML with initial values',
       () async {
-    final instance = TestYamlLoader();
+    final instance = TestYamlLoader(forcedLocale: Locale("en"));
     final result = await instance.load();
     expect(result["fileName"], "en");
     expect(result["extension"], "yaml");
@@ -87,21 +86,21 @@ void main() {
 
   test('`load` should load correct map from TOML with initial values',
       () async {
-    final instance = TestTomlLoader();
+    final instance = TestTomlLoader(forcedLocale: Locale("en"));
     final result = await instance.load();
     expect(result["fileName"], "en");
     expect(result["extension"], "toml");
   });
 
   test('`load` should load correct map from XML with initial values', () async {
-    final instance = TestXmlLoader();
+    final instance = TestXmlLoader(forcedLocale: Locale("en"));
     final result = await instance.load();
     expect(result["fileName"], "en");
     expect(result["extension"], "xml");
   });
 
   test('`load` should load correct map with country code', () async {
-    final instance = TestJsonLoader(useCountryCode: true);
+    final instance = TestJsonLoader(forcedLocale: Locale("en", "US"));
     final result = await instance.load();
     expect(result["fileName"], "en_US");
     expect(result["extension"], "json");

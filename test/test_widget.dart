@@ -9,7 +9,6 @@ class TestWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final FlutterI18nDelegate flutterI18nDelegate = FlutterI18nDelegate(
       translationLoader: TestJsonLoader(
-          useCountryCode: false,
           fallbackFile: 'en',
           basePath: 'assets/i18n',
           forcedLocale: Locale('en')),

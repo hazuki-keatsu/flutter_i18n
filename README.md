@@ -99,11 +99,17 @@ builder: FlutterI18n.rootAppBuilder() //If you want to support RTL.
 
 Below you can find the name and description of the accepted parameters.
 
-The ***useCountryCode*** parameter depends on the *json* configuration:
-- if you used the pattern {languageCode}_{countryCode}, ***useCountryCode*** must be **true**
-- if you used the pattern {languageCode}, ***useCountryCode*** must be **false**
+Translation files are resolved automatically from most to least specific locale. Given a device locale of `zh_Hans_CN`, the loader tries each of the following in order, using the first file it finds:
 
-The ***fallbackFile*** parameter was entroduces with the version **0.1.0** and provide a default language, used when the translation for the current running system is not provided. This should contain the name of a valid *json* file in *assets* folder.
+1. `zh_Hans_CN` (language + script + country)
+2. `zh_CN` (language + country)
+3. `zh_Hans` (language + script)
+4. `zh` (language only)
+5. The ***fallbackFile*** (e.g. `en`)
+
+No configuration is needed — just provide files for the locales you support and the loader will pick the best match automatically.
+
+The ***fallbackFile*** parameter provides a default language used when no translation file matches the current locale. This should contain the name of a valid translation file in the assets folder. Keys missing from the matched locale file are filled in from the fallback.
 
 The ***basePath*** parameter is optionally used to set the base path for translations. If this option is not set, the default path will be `assets/flutter_i18n`. This path must be the same path as the one defined in your ***pubspec.yaml***.
 
@@ -121,9 +127,7 @@ Below you can find the name and description of the accepted parameters.
 
 The ***baseUri*** parameter provide base Uri for your remote translations.
 
-The ***useCountryCode*** parameter depends on the *json* configuration:
-- if you used the pattern {languageCode}_{countryCode}, ***useCountryCode*** must be **true**
-- if you used the pattern {languageCode}, ***useCountryCode*** must be **false**
+Translation files are resolved using the same priority as `FileTranslationLoader` (most specific locale to least specific), with the final fallback to ***fallbackFile***.
 
 The ***fallbackFile*** parameter provide a default language, used when the translation for the current running system is not provided.
 
@@ -180,9 +184,7 @@ Below you can find the name and description of the accepted parameters.
 
 The ***namespaces*** provide a list of filenames for the specific language directory.
 
-The ***useCountryCode*** parameter depends on the *json* configuration:
-- if you used the pattern {languageCode}_{countryCode}, ***useCountryCode*** must be **true**
-- if you used the pattern {languageCode}, ***useCountryCode*** must be **false**
+The locale directory is resolved using the most specific locale available (e.g. `zh_Hans_CN`, then `zh_CN`, then `zh_Hans`, then `zh`). If none of those directories contain the requested namespace file, the loader falls back to ***fallbackDir***.
 
 The ***fallbackDir*** provide a default language directory, used when the translation for the current running system is not provided.
 

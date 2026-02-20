@@ -35,11 +35,9 @@ class TestJsonLoader extends FileTranslationLoader {
     Locale? forcedLocale,
     String fallbackFile = "en",
     String basePath = "assets/flutter_i18n",
-    bool useCountryCode = false,
   }) : super(
             fallbackFile: fallbackFile,
             basePath: basePath,
-            useCountryCode: useCountryCode,
             forcedLocale: forcedLocale);
 
   @override
@@ -53,11 +51,9 @@ class TestYamlLoader extends FileTranslationLoader {
     Locale? forcedLocale,
     String fallbackFile = "en",
     String basePath = "assets/flutter_i18n",
-    bool useCountryCode = false,
   }) : super(
             fallbackFile: fallbackFile,
             basePath: basePath,
-            useCountryCode: useCountryCode,
             forcedLocale: forcedLocale,
             decodeStrategies: [YamlDecodeStrategy()]);
 
@@ -81,11 +77,9 @@ class TestTomlLoader extends FileTranslationLoader {
     Locale? forcedLocale,
     String fallbackFile = "en",
     String basePath = "assets/flutter_i18n",
-    bool useCountryCode = false,
   }) : super(
       fallbackFile: fallbackFile,
       basePath: basePath,
-      useCountryCode: useCountryCode,
       forcedLocale: forcedLocale,
       decodeStrategies: [TomlDecodeStrategy()]);
 
@@ -109,11 +103,9 @@ class TestXmlLoader extends FileTranslationLoader {
     Locale? forcedLocale,
     String fallbackFile = "en",
     String basePath = "assets/flutter_i18n",
-    bool useCountryCode = false,
   }) : super(
             fallbackFile: fallbackFile,
             basePath: basePath,
-            useCountryCode: useCountryCode,
             forcedLocale: forcedLocale,
             decodeStrategies: [XmlDecodeStrategy()]);
 
@@ -138,16 +130,14 @@ class TestXmlLoader extends FileTranslationLoader {
 
 class TestNamespaceLoader extends NamespaceFileTranslationLoader {
   TestNamespaceLoader({
-    required namespaces,
-    forcedLocale,
-    fallbackDir = "en",
-    basePath = "assets/flutter_i18n",
-    useCountryCode = false,
+    required List<String>? namespaces,
+    Locale? forcedLocale,
+    String fallbackDir = "en",
+    String basePath = "assets/flutter_i18n",
   }) : super(
           namespaces: namespaces,
           fallbackDir: fallbackDir,
           basePath: basePath,
-          useCountryCode: useCountryCode,
           forcedLocale: forcedLocale,
         );
 

@@ -12,16 +12,21 @@ import 'package:flutter_i18n/loaders/translation_loader.dart';
 
 import '../utils/message_printer.dart';
 
-/// Loads translation files from JSON, YAML or XML format
+/// Loads translation files from JSON, YAML or XML format.
+///
+/// File candidates are tried in order from most to least specific:
+///   1. `lang_Script_Country` (e.g. `zh_Hans_CN`)
+///   2. `lang_Country`        (e.g. `de_DE`)
+///   3. `lang_Script`         (e.g. `zh_Hans`)
+///   4. `lang`                (e.g. `de`)
+///   5. [fallbackFile]        (e.g. `en`)
 class FileTranslationLoader extends TranslationLoader implements IFileContent {
   final String? fallbackFile;
   final String basePath;
   final String separator;
-  final bool useCountryCode;
-  final bool useScriptCode;
   AssetBundle assetBundle = rootBundle;
 
-  Map<dynamic, dynamic> _decodedMap = Map();
+  Map<dynamic, dynamic> _decodedMap = {};
   late List<BaseDecodeStrategy> _decodeStrategies;
 
   set decodeStrategies(List<BaseDecodeStrategy>? decodeStrategies) =>
@@ -34,11 +39,9 @@ class FileTranslationLoader extends TranslationLoader implements IFileContent {
           ];
 
   FileTranslationLoader(
-      {String? this.fallbackFile = "en",
-      String this.basePath = "assets/flutter_i18n",
-      String this.separator = "_",
-      bool this.useCountryCode = true,
-      bool this.useScriptCode = true,
+      {this.fallbackFile = "en",
+      this.basePath = "assets/flutter_i18n",
+      this.separator = "_",
       Locale? forcedLocale,
       List<BaseDecodeStrategy>? decodeStrategies}) {
     this.forcedLocale = forcedLocale;
@@ -46,28 +49,26 @@ class FileTranslationLoader extends TranslationLoader implements IFileContent {
   }
 
   /// Return the translation Map
+  @override
   Future<Map> load() async {
-    _decodedMap = Map();
-    await this._defineLocale();
-    
-    final candidateFiles = generateLocaleCandidates();
-    Map<dynamic, dynamic> loadedMap = Map();
-    
-    for (final candidateFile in candidateFiles) {
-      final translationMap = await _loadTranslation(candidateFile, false);
-      if (translationMap.isNotEmpty) {
-        loadedMap = _deepMergeMaps(translationMap, loadedMap);
-        MessagePrinter.debug('Loaded translation file: $candidateFile');
+    _decodedMap = {};
+    await _defineLocale();
+
+    String? loadedCandidate;
+    for (final candidate in generateLocaleCandidates()) {
+      final loaded = await _loadTranslation(candidate, false);
+      if (loaded.isNotEmpty) {
+        _decodedMap.addAll(loaded);
+        loadedCandidate = candidate;
+        break;
       }
     }
-    
-    if (fallbackFile != null && !candidateFiles.contains(fallbackFile)) {
+
+    if (fallbackFile != null && loadedCandidate != fallbackFile) {
       final Map fallbackMap = await _loadTranslation(fallbackFile!, true);
-      loadedMap = _deepMergeMaps(fallbackMap, loadedMap);
+      _decodedMap = _deepMergeMaps(fallbackMap, _decodedMap);
       MessagePrinter.debug('Fallback maps have been merged');
     }
-    
-    _decodedMap = loadedMap;
     return _decodedMap;
   }
 
@@ -78,22 +79,24 @@ class FileTranslationLoader extends TranslationLoader implements IFileContent {
         cache: false);
   }
 
-  Future<Map<dynamic, dynamic>> _loadTranslation(String fileName, bool isFallback) async {
+  Future<Map<dynamic, dynamic>> _loadTranslation(
+      String fileName, bool isFallback) async {
     try {
       return await loadFile(fileName);
     } catch (e) {
       if (isFallback) {
         MessagePrinter.debug('Error loading fallback translation $fileName: $e');
       } else {
-        MessagePrinter.debug('Translation file $fileName not found, trying next candidate');
+        MessagePrinter.debug(
+            'Translation file $fileName not found, trying next candidate');
       }
     }
-    return Map();
+    return {};
   }
 
   Future _defineLocale() async {
-    this.locale = locale ?? await findDeviceLocale();
-    MessagePrinter.info("The current locale is ${this.locale}");
+    locale = locale ?? await findDeviceLocale();
+    MessagePrinter.info("The current locale is $locale");
   }
 
   Map<K, V> _deepMergeMaps<K, V>(
@@ -131,7 +134,7 @@ class FileTranslationLoader extends TranslationLoader implements IFileContent {
     final Stream<Map?> strategiesStream = Stream.fromFutures(strategiesFutures);
     return await strategiesStream.firstWhere((map) => map != null,
             orElse: null) ??
-        Map();
+        {};
   }
 
   List<Future<Map?>> _executeStrategies(final String fileName) {
@@ -140,50 +143,30 @@ class FileTranslationLoader extends TranslationLoader implements IFileContent {
         .toList();
   }
 
-  /// Generate a list of locale candidate files in fallback order
+  /// Returns locale file name candidates from most to least specific.
   @protected
   List<String> generateLocaleCandidates() {
+    final lang = locale!.languageCode;
+    final script = locale!.scriptCode;
+    final country = locale!.countryCode;
+
     final candidates = <String>[];
-    final locale = this.locale!;
-    
-    // Most specific: language + script + country (e.g., "zh_Hans_CN")
-    if (useScriptCode && useCountryCode && 
-        locale.scriptCode != null && locale.countryCode != null) {
-      candidates.add("${locale.languageCode}${separator}${locale.scriptCode}${separator}${locale.countryCode}");
+    if (script != null && country != null) {
+      candidates.add('$lang$separator$script$separator$country');
     }
-    
-    // Language + country (e.g., "en_US", "de_DE")
-    if (useCountryCode && locale.countryCode != null) {
-      candidates.add("${locale.languageCode}${separator}${locale.countryCode}");
+    if (country != null) {
+      candidates.add('$lang$separator$country');
     }
-    
-    // Language + script (e.g., "zh_Hans")
-    if (useScriptCode && locale.scriptCode != null) {
-      candidates.add("${locale.languageCode}${separator}${locale.scriptCode}");
+    if (script != null) {
+      candidates.add('$lang$separator$script');
     }
-    
-    // Base language (e.g., "en", "de", "zh")
-    candidates.add(locale.languageCode);
-    
+    candidates.add(lang);
     return candidates;
   }
 
-  /// Compose the file name using the format languageCode_countryCode
+  /// Compose the file name using the most specific locale components available.
   @protected
   String composeFileName() {
-    return "${locale!.languageCode}${_composeSuffixCode()}";
-  }
-
-  /// Return the country code to attach to the file name, if required
-  @protected
-  String _composeSuffixCode() {
-    String countryCode = "";
-    if (useScriptCode && locale!.scriptCode != null) {
-      countryCode = "${countryCode}${separator}${locale!.scriptCode}";
-    }
-    if (useCountryCode && locale!.countryCode != null) {
-      countryCode = "${countryCode}${separator}${locale!.countryCode}";
-    }
-    return countryCode;
+    return generateLocaleCandidates().first;
   }
 }

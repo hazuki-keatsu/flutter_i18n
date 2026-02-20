@@ -11,7 +11,6 @@ void main() {
     var instance = TestNamespaceLoader(namespaces: namespaces);
     expect(instance.fallbackDir, "en");
     expect(instance.basePath, isNotNull);
-    expect(instance.useCountryCode, isFalse);
   });
 
   test('should have assert if namespaces is empty list', () {
@@ -45,15 +44,16 @@ void main() {
   });
 
   test('`load` should load correct map with initial values', () async {
-    final instance = TestNamespaceLoader(namespaces: ["common"]);
+    final instance = TestNamespaceLoader(
+        forcedLocale: Locale("en"), namespaces: ["common"]);
     final result = await instance.load();
     expect(result["common"]["fileName"], "en/common");
     expect(result["common"]["extension"], "json");
   });
 
   test('`load` should load correct map with country code', () async {
-    final instance =
-        TestNamespaceLoader(useCountryCode: true, namespaces: ["common"]);
+    final instance = TestNamespaceLoader(
+        forcedLocale: Locale("en", "US"), namespaces: ["common"]);
     final result = await instance.load();
     expect(result["common"]["fileName"], "en_US/common");
     expect(result["common"]["extension"], "json");
@@ -102,7 +102,8 @@ void main() {
   });
 
   test('`load` should load correct map different namespaces', () async {
-    final instance = TestNamespaceLoader(namespaces: ["ns1", "ns2"]);
+    final instance =
+        TestNamespaceLoader(forcedLocale: Locale("en"), namespaces: ["ns1", "ns2"]);
     final result = await instance.load();
 
     expect(result, isMap);
