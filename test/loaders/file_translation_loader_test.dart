@@ -99,7 +99,7 @@ void main() {
     expect(result["extension"], "xml");
   });
 
-  test('`load` should load correct map with country code', () async {
+  test('`load` should load most specific locale file first', () async {
     final instance = TestJsonLoader(forcedLocale: Locale("en", "US"));
     final result = await instance.load();
     expect(result["fileName"], "en_US");

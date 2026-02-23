@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_i18n/loaders/decoders/base_decode_strategy.dart';
@@ -54,29 +55,30 @@ class FileTranslationLoader extends TranslationLoader implements IFileContent {
     _decodedMap = {};
     await _defineLocale();
 
-    String? loadedCandidate;
-    for (final candidate in generateLocaleCandidates()) {
-      final loaded = await _loadTranslation(candidate, false);
-      if (loaded.isNotEmpty) {
-        _decodedMap.addAll(loaded);
-        loadedCandidate = candidate;
-        break;
+    final candidateFiles = generateLocaleCandidates();
+    Map<dynamic, dynamic> loadedMap = {};
+
+    for (final candidateFile in candidateFiles) {
+      final translationMap = await _loadTranslation(candidateFile, false);
+      if (translationMap.isNotEmpty) {
+        loadedMap = deepMergeMaps(translationMap, loadedMap);
+        MessagePrinter.debug('Loaded translation file: $candidateFile');
       }
     }
 
-    if (fallbackFile != null && loadedCandidate != fallbackFile) {
+    if (fallbackFile != null && !candidateFiles.contains(fallbackFile)) {
       final Map fallbackMap = await _loadTranslation(fallbackFile!, true);
-      _decodedMap = _deepMergeMaps(fallbackMap, _decodedMap);
+      loadedMap = deepMergeMaps(fallbackMap, loadedMap);
       MessagePrinter.debug('Fallback maps have been merged');
     }
-    return _decodedMap;
+    return loadedMap;
   }
 
   /// Load the file using the AssetBundle rootBundle
   @override
   Future<String> loadString(final String fileName, final String extension) {
     return assetBundle.loadString('$basePath/$fileName.$extension',
-        cache: false);
+        cache: !kDebugMode);
   }
 
   Future<Map<dynamic, dynamic>> _loadTranslation(
@@ -99,7 +101,8 @@ class FileTranslationLoader extends TranslationLoader implements IFileContent {
     MessagePrinter.info("The current locale is $locale");
   }
 
-  Map<K, V> _deepMergeMaps<K, V>(
+  @protected
+  Map<K, V> deepMergeMaps<K, V>(
     Map<K, V> map1,
     Map<K, V> map2,
   ) {
@@ -114,7 +117,7 @@ class FileTranslationLoader extends TranslationLoader implements IFileContent {
         if (p1 is Map && p2 is Map) {
           Map map1 = p1;
           Map map2 = p2;
-          mapResult = _deepMergeMaps(map1, map2) as V;
+          mapResult = deepMergeMaps(map1, map2) as V;
         } else {
           mapResult = p2;
         }
@@ -162,11 +165,5 @@ class FileTranslationLoader extends TranslationLoader implements IFileContent {
     }
     candidates.add(lang);
     return candidates;
-  }
-
-  /// Compose the file name using the most specific locale components available.
-  @protected
-  String composeFileName() {
-    return generateLocaleCandidates().first;
   }
 }

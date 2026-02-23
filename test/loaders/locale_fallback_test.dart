@@ -56,6 +56,15 @@ void main() {
       expect(candidates, equals(['zh_Hans_CN', 'zh_CN', 'zh_Hans', 'zh']));
     });
 
+    test('should generate only base language for locale without country', () {
+      final loader = TestableFileTranslationLoader();
+      loader.locale = const Locale('de');
+
+      final candidates = loader.generateLocaleCandidates();
+
+      expect(candidates, equals(['de']));
+    });
+
     test('should load with fallback hierarchy', () async {
       final loader = TestableFileTranslationLoader(
         fallbackFile: 'en',

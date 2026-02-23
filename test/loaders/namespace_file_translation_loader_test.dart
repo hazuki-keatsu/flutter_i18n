@@ -44,14 +44,14 @@ void main() {
   });
 
   test('`load` should load correct map with initial values', () async {
-    final instance = TestNamespaceLoader(
-        forcedLocale: Locale("en"), namespaces: ["common"]);
+    final instance =
+        TestNamespaceLoader(forcedLocale: Locale("en"), namespaces: ["common"]);
     final result = await instance.load();
     expect(result["common"]["fileName"], "en/common");
     expect(result["common"]["extension"], "json");
   });
 
-  test('`load` should load correct map with country code', () async {
+  test('`load` should prefer most specific locale directory', () async {
     final instance = TestNamespaceLoader(
         forcedLocale: Locale("en", "US"), namespaces: ["common"]);
     final result = await instance.load();
