@@ -8,7 +8,6 @@ Future main() async {
   final FlutterI18nDelegate flutterI18nDelegate = FlutterI18nDelegate(
     translationLoader: NamespaceFileTranslationLoader(
       namespaces: ["common", "home"],
-      useCountryCode: false,
       fallbackDir: 'en',
       basePath: 'assets/i18n_namespace',
       forcedLocale: const Locale('it'),

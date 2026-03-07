@@ -3,7 +3,9 @@ import 'package:flutter_i18n/loaders/decoders/base_decode_strategy.dart';
 import 'package:flutter_i18n/loaders/file_translation_loader.dart';
 import 'package:flutter_i18n/utils/message_printer.dart';
 
-/// Loads translations from separate files
+/// Loads translations from separate namespace files per locale directory.
+/// Uses the same fallback hierarchy as [FileTranslationLoader]:
+/// most-specific locale first, then less specific, then [fallbackDir].
 class NamespaceFileTranslationLoader extends FileTranslationLoader {
   final String fallbackDir;
   final List<String>? namespaces;
@@ -15,15 +17,11 @@ class NamespaceFileTranslationLoader extends FileTranslationLoader {
       this.fallbackDir = "en",
       String basePath = "assets/flutter_i18n",
       String separator = "_",
-      bool useCountryCode = false,
-      bool useScriptCode = false,
       Locale? forcedLocale,
       List<BaseDecodeStrategy>? decodeStrategies})
       : super(
             basePath: basePath,
             separator: separator,
-            useCountryCode: useCountryCode,
-            useScriptCode: useScriptCode,
             forcedLocale: forcedLocale,
             decodeStrategies: decodeStrategies) {
     assert(namespaces != null);
@@ -43,22 +41,30 @@ class NamespaceFileTranslationLoader extends FileTranslationLoader {
   }
 
   Future<void> _loadTranslation(String namespace) async {
-    _decodedMap[namespace] = {};
+    Map<dynamic, dynamic> loadedMap = {};
 
-    try {
-      _decodedMap[namespace] =
-          await loadFile("${composeFileName()}/$namespace");
-    } catch (e) {
-      MessagePrinter.debug('Error loading translation $e');
-      await _loadTranslationFallback(namespace);
+    for (final candidate in generateLocaleCandidates()) {
+      try {
+        final translationMap = await loadFile("$candidate/$namespace");
+        if (translationMap.isNotEmpty) {
+          loadedMap = deepMergeMaps(translationMap, loadedMap);
+          MessagePrinter.debug('Loaded namespace $namespace from $candidate');
+        }
+      } catch (e) {
+        MessagePrinter.debug('Namespace $candidate/$namespace not found, trying next candidate');
+      }
     }
-  }
 
-  Future<void> _loadTranslationFallback(String namespace) async {
-    try {
-      _decodedMap[namespace] = await loadFile("$fallbackDir/$namespace");
-    } catch (e) {
-      MessagePrinter.debug('Error loading translation fallback $e');
+    if (!generateLocaleCandidates().contains(fallbackDir)) {
+      try {
+        final fallbackMap = await loadFile("$fallbackDir/$namespace");
+        loadedMap = deepMergeMaps(fallbackMap, loadedMap);
+        MessagePrinter.debug('Loaded namespace $namespace fallback from $fallbackDir');
+      } catch (e) {
+        MessagePrinter.debug('Error loading fallback $fallbackDir/$namespace: $e');
+      }
     }
+
+    _decodedMap[namespace] = loadedMap;
   }
 }

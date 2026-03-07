@@ -15,13 +15,10 @@ class NetworkFileTranslationLoader extends FileTranslationLoader {
       Locale? forcedLocale,
       String fallbackFile = "en",
       String separator = "_",
-      bool useCountryCode = false,
-      bool useScriptCode = false,
       List<BaseDecodeStrategy>? decodeStrategies})
       : super(
             fallbackFile: fallbackFile,
             separator: separator,
-            useCountryCode: useCountryCode,
             forcedLocale: forcedLocale,
             decodeStrategies: decodeStrategies);
 
