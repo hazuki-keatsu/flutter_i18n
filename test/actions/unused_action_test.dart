@@ -5,14 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../bin/actions/unused_action.dart';
 
-/// Runs [action] and waits for async work to settle, then returns the action
-/// for inspection of test hooks.
-Future<UnusedAction> run(UnusedAction action, final List<String> params) async {
-  action.executeAction(params);
-  await Future.delayed(const Duration(milliseconds: 200));
-  return action;
-}
-
 const _fixture = 'test/fixtures/unused';
 const _i18nDir = '$_fixture/i18n';
 const _i18nNsDir = '$_fixture/i18n_ns';
@@ -23,153 +15,111 @@ void main() {
     // -----------------------------------------------------------------------
     // String literal key scanning
     // -----------------------------------------------------------------------
-    test('finds all string-literal keys in translate / I18nText / '
-        'I18nPlural / fallbackKey', () async {
-      final a = await run(UnusedAction(),
-          ['--asset=$_i18nDir', '--code=$_codeDir/main.dart']);
+    test('finds all string-literal keys', () async {
+      final r = await UnusedAction()
+          .analyze(['--asset=$_i18nDir', '--code=$_codeDir/main.dart']);
 
-      // Keys used in main.dart:
-      expect(a.testUsedKeys, contains('title'));
-      expect(a.testUsedKeys, contains('label.main'));
-      expect(a.testUsedKeys, contains('label.confirmDelete'));
-      expect(a.testUsedKeys, contains('button.clickMe'));
-      expect(a.testUsedKeys, contains('button.label.save'));
-      expect(a.testUsedKeys, contains('button.label.discard'));
-      expect(a.testUsedKeys, contains('errors.404.title'));
-      expect(a.testUsedKeys, contains('errors.404.description'));
-      expect(a.testUsedKeys, contains('errors.500.title'));
-
-      // Plural stems from I18nPlural + FlutterI18n.plural:
-      expect(a.testUsedPluralStems, contains('clicked.times'));
-
-      // Unused keys (in en.json but NOT in main.dart):
-      expect(a.testUnusedKeys, contains('unusedKey'));
-      expect(a.testUnusedKeys, contains('alsoUnused.nestedOne'));
-      expect(a.testUnusedKeys, contains('alsoUnused.nestedTwo'));
+      expect(r.usedKeys.keys, containsAll([
+            'title', 'label.main', 'label.confirmDelete', 'button.clickMe',
+            'button.label.save', 'button.label.discard', 'errors.404.title',
+            'errors.404.description', 'errors.500.title',
+          ]));
+      expect(r.usedPluralStems, contains('clicked.times'));
+      expect(r.unusedKeys, containsAll([
+            'unusedKey', 'alsoUnused.nestedOne', 'alsoUnused.nestedTwo',
+          ]));
     });
 
     test('finds single-quoted string keys', () async {
-      final a = await run(UnusedAction(),
-          ['--asset=$_i18nDir', '--code=$_codeDir/main.dart']);
-      // Single-quoted in main.dart: 'label.confirmDelete', 'errors.404.title',
-      //   'errors.500.title'
-      expect(a.testUsedKeys, contains('label.confirmDelete'));
-      expect(a.testUsedKeys, contains('errors.404.title'));
-      expect(a.testUsedKeys, contains('errors.500.title'));
+      final r = await UnusedAction()
+          .analyze(['--asset=$_i18nDir', '--code=$_codeDir/main.dart']);
+      expect(r.usedKeys.keys, contains('label.confirmDelete'));
+      expect(r.usedKeys.keys, contains('errors.404.title'));
     });
 
-    test('handles deeply nested keys in map', () async {
-      final a = await run(UnusedAction(),
-          ['--asset=$_i18nDir', '--code=$_codeDir/main.dart']);
-      expect(a.testUsedKeys, contains('button.label.save'));
-      expect(a.testUsedKeys, contains('button.label.discard'));
-      expect(a.testUsedKeys, contains('errors.404.title'));
-      expect(a.testUsedKeys, contains('errors.404.description'));
+    test('handles deeply nested keys', () async {
+      final r = await UnusedAction()
+          .analyze(['--asset=$_i18nDir', '--code=$_codeDir/main.dart']);
+      expect(r.usedKeys.keys, contains('button.label.save'));
+      expect(r.usedKeys.keys, contains('errors.404.description'));
     });
 
     test('handles keys containing numeric segments', () async {
-      final a = await run(UnusedAction(),
-          ['--asset=$_i18nDir', '--code=$_codeDir/main.dart']);
-      expect(a.testUsedKeys, contains('errors.404.title'));
-      expect(a.testUsedKeys, contains('errors.404.description'));
-      expect(a.testUsedKeys, contains('errors.500.title'));
+      final r = await UnusedAction()
+          .analyze(['--asset=$_i18nDir', '--code=$_codeDir/main.dart']);
+      expect(r.usedKeys.keys, contains('errors.404.title'));
+      expect(r.usedKeys.keys, contains('errors.500.title'));
     });
 
     // -----------------------------------------------------------------------
     // Namespace layout
     // -----------------------------------------------------------------------
     test('detects namespace layout and prefixes keys', () async {
-      // with_alias.dart uses "common.appName"
-      final a = await run(UnusedAction(), [
+      final r = await UnusedAction().analyze([
         '--asset=$_i18nNsDir',
         '--code=$_codeDir/with_alias.dart',
       ]);
-      expect(a.testUsedKeys, contains('common.appName'));
-      // Not used → unused:
-      expect(a.testUnusedKeys, contains('common.appVersion'));
-      expect(a.testUnusedKeys, contains('common.unusedCommonKey'));
-    });
-
-    test('handles flat + namespace mixed layout', () async {
-      final a = await run(UnusedAction(), [
-        '--asset=$_i18nDir',
-        '--asset=$_i18nNsDir',
-        '--code=$_codeDir',
-      ]);
-      // from flat: title, label.main etc.
-      expect(a.testUsedKeys, contains('title'));
-      expect(a.testUsedKeys, contains('label.main'));
-      // from namespace:
-      expect(a.testUsedKeys, contains('common.appName'));
-      expect(a.testUsedKeys, contains('home.welcome'));
-      // unused:
-      expect(a.testUnusedKeys, contains('unusedKey'));
-      expect(a.testUnusedKeys, contains('common.unusedCommonKey'));
+      expect(r.usedKeys.keys, contains('common.appName'));
+      expect(r.unusedKeys, contains('common.appVersion'));
+      expect(r.unusedKeys, contains('common.unusedCommonKey'));
     });
 
     // -----------------------------------------------------------------------
     // Import variants
     // -----------------------------------------------------------------------
     test('handles aliased import', () async {
-      final a = await run(UnusedAction(), [
+      final r = await UnusedAction().analyze([
         '--asset=$_i18nNsDir',
         '--code=$_codeDir/with_alias.dart',
       ]);
-      // i18n.FlutterI18n.translate and i18n.I18nText
-      expect(a.testUsedKeys, contains('common.appName'));
+      expect(r.usedKeys.keys, contains('common.appName'));
     });
 
     test('handles show combinator', () async {
-      final a = await run(UnusedAction(), [
+      final r = await UnusedAction().analyze([
         '--asset=$_i18nNsDir',
         '--code=$_codeDir/with_show.dart',
       ]);
-      expect(a.testUsedKeys, contains('common.appName'));
-      expect(a.testUsedKeys, contains('common.copyright'));
+      expect(r.usedKeys.keys, containsAll(['common.appName', 'common.copyright']));
     });
 
     test('handles hide combinator', () async {
-      final a = await run(UnusedAction(), [
+      final r = await UnusedAction().analyze([
         '--asset=$_i18nNsDir',
         '--code=$_codeDir/with_hide.dart',
       ]);
-      expect(a.testUsedKeys, contains('home.welcome'));
-      expect(a.testUsedKeys, contains('home.greeting'));
+      expect(r.usedKeys.keys, containsAll(['home.welcome', 'home.greeting']));
     });
 
     // -----------------------------------------------------------------------
     // Const variable resolution
     // -----------------------------------------------------------------------
     test('resolves const variable declared in same file', () async {
-      final a = await run(UnusedAction(), [
+      final r = await UnusedAction().analyze([
         '--asset=$_i18nNsDir',
         '--code=$_codeDir/with_const.dart',
       ]);
-      // static const String welcomeKey = "home.welcome"
-      // → FlutterI18n.translate(context, welcomeKey) resolves
-      expect(a.testUsedKeys, contains('home.welcome'));
+      expect(r.usedKeys.keys, contains('home.welcome'));
     });
 
     // -----------------------------------------------------------------------
-    // Uncheckable — interpolation & variables
+    // Uncheckable
     // -----------------------------------------------------------------------
     test('marks string interpolation as uncheckable', () async {
-      final a = await run(UnusedAction(), [
+      final r = await UnusedAction().analyze([
         '--asset=$_i18nDir',
         '--code=$_codeDir/with_interpolation.dart',
       ]);
-      // "home.$section.welcome" and "${section}.label.save" can't resolve
-      expect(a.testUncheckable.length, 2);
-      expect(a.testUncheckable.any((r) => r.snippet.contains('section')), isTrue);
-      // These should NOT end up in usedKeys
-      expect(a.testUsedKeys, isNot(contains('home.profile.welcome')));
+      expect(r.uncheckable.length, 2);
+      expect(r.uncheckable.any((x) => x.snippet.contains('section')), isTrue);
+      expect(r.usedKeys.keys, isNot(contains('home.profile.welcome')));
     });
 
     test('marks variable args as uncheckable', () async {
       final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
       try {
-        File('${tmpDir.path}/en.json')
-            .writeAsStringSync(json.encode({'hello': 'Hello'}));
+        File('${tmpDir.path}/en.json').writeAsStringSync(
+            json.encode({'hello': 'Hello'}));
         File('${tmpDir.path}/main.dart').writeAsStringSync('''
 import 'package:flutter/material.dart';
 import 'package:flutter_i18n/flutter_i18n.dart';
@@ -180,15 +130,13 @@ class Foo extends StatelessWidget {
   }
 }
 ''');
-        final a = await run(UnusedAction(), [
+        final r = await UnusedAction().analyze([
           '--asset=${tmpDir.path}',
           '--code=${tmpDir.path}',
         ]);
-        // Variable not const → uncheckable
-        expect(a.testUncheckable.length, 1);
-        expect(a.testUncheckable.first.snippet, contains('dynamicKey'));
-        // "hello" is not marked used (variable, not string literal)
-        expect(a.testUsedKeys, isNot(contains('hello')));
+        expect(r.uncheckable.length, 1);
+        expect(r.uncheckable.first.snippet, contains('dynamicKey'));
+        expect(r.usedKeys.keys, isNot(contains('hello')));
       } finally {
         tmpDir.deleteSync(recursive: true);
       }
@@ -216,18 +164,15 @@ class Foo extends StatelessWidget {
   }
 }
 ''');
-        final a = await run(UnusedAction(), [
+        final r = await UnusedAction().analyze([
           '--asset=${tmpDir.path}',
           '--code=${tmpDir.path}',
         ]);
-        // Stem tracked:
-        expect(a.testUsedPluralStems, contains('clicked.times'));
-        // clicked.times-0/1/2 all covered → not in unused
-        expect(a.testUnusedKeys, isNot(contains('clicked.times-0')));
-        expect(a.testUnusedKeys, isNot(contains('clicked.times-1')));
-        expect(a.testUnusedKeys, isNot(contains('clicked.times-2')));
-        // otherKey is unused
-        expect(a.testUnusedKeys, contains('otherKey'));
+        expect(r.usedPluralStems, contains('clicked.times'));
+        expect(r.unusedKeys, isNot(contains('clicked.times-0')));
+        expect(r.unusedKeys, isNot(contains('clicked.times-1')));
+        expect(r.unusedKeys, isNot(contains('clicked.times-2')));
+        expect(r.unusedKeys, contains('otherKey'));
       } finally {
         tmpDir.deleteSync(recursive: true);
       }
@@ -240,8 +185,8 @@ class Foo extends StatelessWidget {
         () async {
       final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
       try {
-        File('${tmpDir.path}/en.json')
-            .writeAsStringSync(json.encode({'defined': 'ok'}));
+        File('${tmpDir.path}/en.json').writeAsStringSync(
+            json.encode({'defined': 'ok'}));
         File('${tmpDir.path}/main.dart').writeAsStringSync('''
 import 'package:flutter/material.dart';
 import 'package:flutter_i18n/flutter_i18n.dart';
@@ -249,14 +194,13 @@ class Foo extends StatelessWidget {
   Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "missingKey"));
 }
 ''');
-        final a = await run(UnusedAction(), [
+        final r = await UnusedAction().analyze([
           '--asset=${tmpDir.path}',
           '--code=${tmpDir.path}',
         ]);
-        expect(a.testMissingKeys, contains('missingKey'));
-        expect(a.testUsedKeys, contains('missingKey'));
-        // defined is not used → unused
-        expect(a.testUnusedKeys, contains('defined'));
+        expect(r.missingKeys, contains('missingKey'));
+        expect(r.usedKeys.keys, contains('missingKey'));
+        expect(r.unusedKeys, contains('defined'));
       } finally {
         tmpDir.deleteSync(recursive: true);
       }
@@ -268,18 +212,16 @@ class Foo extends StatelessWidget {
     test('skips files without flutter_i18n import', () async {
       final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
       try {
-        File('${tmpDir.path}/en.json')
-            .writeAsStringSync(json.encode({'hello': 'Hello'}));
+        File('${tmpDir.path}/en.json').writeAsStringSync(
+            json.encode({'hello': 'Hello'}));
         File('${tmpDir.path}/unrelated.dart')
             .writeAsStringSync('String greet() => "hello";');
-        final a = await run(UnusedAction(), [
+        final r = await UnusedAction().analyze([
           '--asset=${tmpDir.path}',
           '--code=${tmpDir.path}',
         ]);
-        // No flutter_i18n import → no keys found in code
-        expect(a.testUsedKeys, isEmpty);
-        // en.json key is unused
-        expect(a.testUnusedKeys, contains('hello'));
+        expect(r.usedKeys, isEmpty);
+        expect(r.unusedKeys, contains('hello'));
       } finally {
         tmpDir.deleteSync(recursive: true);
       }
@@ -288,7 +230,7 @@ class Foo extends StatelessWidget {
     // -----------------------------------------------------------------------
     // Auto-clear — JSON
     // -----------------------------------------------------------------------
-    test('auto-clear removes unused keys from JSON (flat)', () async {
+    test('auto-clear removes unused keys from JSON', () async {
       final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
       try {
         final i18nFile = File('${tmpDir.path}/en.json');
@@ -304,7 +246,7 @@ class Foo extends StatelessWidget {
   Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "used"));
 }
 ''');
-        await run(UnusedAction(), [
+        await UnusedAction().analyze([
           '--asset=${tmpDir.path}',
           '--code=${tmpDir.path}',
           '--auto-clear',
@@ -312,7 +254,6 @@ class Foo extends StatelessWidget {
         final result = json.decode(i18nFile.readAsStringSync());
         expect(result.containsKey('used'), isTrue);
         expect(result.containsKey('unused'), isFalse);
-        // nested parent stays as empty {} after leaf-key deletion
       } finally {
         tmpDir.deleteSync(recursive: true);
       }
@@ -332,7 +273,7 @@ class Foo extends StatelessWidget {
   Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "a.b.c"));
 }
 ''');
-        await run(UnusedAction(), [
+        await UnusedAction().analyze([
           '--asset=${tmpDir.path}',
           '--code=${tmpDir.path}',
           '--auto-clear',
@@ -346,7 +287,7 @@ class Foo extends StatelessWidget {
     });
 
     // -----------------------------------------------------------------------
-    // Auto-clear — YAML
+    // Auto-clear — other formats
     // -----------------------------------------------------------------------
     test('auto-clear removes unused keys from YAML', () async {
       final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
@@ -361,7 +302,7 @@ class Foo extends StatelessWidget {
   Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "used"));
 }
 ''');
-        await run(UnusedAction(), [
+        await UnusedAction().analyze([
           '--asset=${tmpDir.path}',
           '--code=${tmpDir.path}',
           '--auto-clear',
@@ -374,15 +315,11 @@ class Foo extends StatelessWidget {
       }
     });
 
-    // -----------------------------------------------------------------------
-    // Auto-clear — TOML
-    // -----------------------------------------------------------------------
     test('auto-clear removes unused keys from TOML', () async {
       final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
       try {
         final i18nFile = File('${tmpDir.path}/en.toml');
-        i18nFile.writeAsStringSync(
-            'used = "used"\nunused = "unused"\n');
+        i18nFile.writeAsStringSync('used = "used"\nunused = "unused"\n');
         File('${tmpDir.path}/main.dart').writeAsStringSync('''
 import 'package:flutter/material.dart';
 import 'package:flutter_i18n/flutter_i18n.dart';
@@ -390,7 +327,7 @@ class Foo extends StatelessWidget {
   Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "used"));
 }
 ''');
-        await run(UnusedAction(), [
+        await UnusedAction().analyze([
           '--asset=${tmpDir.path}',
           '--code=${tmpDir.path}',
           '--auto-clear',
@@ -403,9 +340,6 @@ class Foo extends StatelessWidget {
       }
     });
 
-    // -----------------------------------------------------------------------
-    // Auto-clear — XML
-    // -----------------------------------------------------------------------
     test('auto-clear removes unused keys from XML', () async {
       final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
       try {
@@ -419,7 +353,7 @@ class Foo extends StatelessWidget {
   Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "used"));
 }
 ''');
-        await run(UnusedAction(), [
+        await UnusedAction().analyze([
           '--asset=${tmpDir.path}',
           '--code=${tmpDir.path}',
           '--auto-clear',
@@ -447,14 +381,14 @@ class Foo extends StatelessWidget {
   Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "used"));
 }
 ''');
-        final a = await run(UnusedAction(), [
+        final r = await UnusedAction().analyze([
           '--asset=${tmpDir.path}',
           '--code=${tmpDir.path}',
         ]);
-        expect(a.testUsedKeys, contains('used'));
-        expect(a.testUnusedKeys, isEmpty);
-        expect(a.testMissingKeys, isEmpty);
-        expect(a.testUncheckable, isEmpty);
+        expect(r.usedKeys.keys, contains('used'));
+        expect(r.unusedKeys, isEmpty);
+        expect(r.missingKeys, isEmpty);
+        expect(r.uncheckable, isEmpty);
       } finally {
         tmpDir.deleteSync(recursive: true);
       }
@@ -471,29 +405,25 @@ class Foo extends StatelessWidget {
   Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "key"));
 }
 ''');
-        final a = await run(UnusedAction(), [
+        final r = await UnusedAction().analyze([
           '--asset=${tmpDir.path}',
           '--code=${tmpDir.path}',
         ]);
-        // key is used but not defined → missing
-        expect(a.testMissingKeys, contains('key'));
-        // No keys defined → unused is empty
-        expect(a.testUnusedKeys, isEmpty);
+        expect(r.missingKeys, contains('key'));
+        expect(r.unusedKeys, isEmpty);
       } finally {
         tmpDir.deleteSync(recursive: true);
       }
     });
 
-    test('all well-defined keys match with multi-file code', () async {
-      final a = await run(UnusedAction(), [
+    test('mixed flat + namespace layout', () async {
+      final r = await UnusedAction().analyze([
         '--asset=$_i18nDir',
         '--asset=$_i18nNsDir',
         '--code=$_codeDir',
       ]);
-      // All fixtures combined — no surprise failures
-      expect(a.testUsedKeys, isNotEmpty);
-      expect(a.testUnusedKeys, isNotEmpty);
-      expect(a.testUsedPluralStems, isNotEmpty);
+      expect(r.usedKeys.keys, containsAll(['title', 'common.appName', 'home.welcome']));
+      expect(r.unusedKeys, containsAll(['unusedKey', 'common.unusedCommonKey']));
     });
   });
 }
