@@ -90,7 +90,8 @@ class UnusedAction extends AbstractAction {
     if (_assetPaths.isNotEmpty) {
       return _assetPaths.expand(_collectAssetFiles).toList();
     }
-    return retrieveAssetsContent();
+    final pubspecAssets = await retrieveAssetsFolders();
+    return pubspecAssets.expand(_collectAssetFiles).toList();
   }
 
   List<File> _resolveCodePaths() {
@@ -392,14 +393,28 @@ class UnusedAction extends AbstractAction {
   void _addUncheckable(final String content, final int pos,
       final String filePath, final List<UnresolvedRef> uncheckable) {
     final line = '\n'.allMatches(content.substring(0, pos)).length + 1;
-    final snippet = content
-        .substring(pos, (pos + 60).clamp(0, content.length))
-        .replaceAll('\n', ' ')
-        .trim();
+    final snippet = _extractArgSnippet(content, pos);
     uncheckable.add(UnresolvedRef(filePath, line, snippet));
     if (_verbose) {
       MessagePrinter.info('[uncheckable] $filePath:$line — $snippet');
     }
+  }
+
+  /// Extract just the argument expression at [pos], for clean reporting.
+  String _extractArgSnippet(final String content, final int pos) {
+    final remaining = content.substring(pos);
+
+    var m = RegExp(r'^"([^"]*)"').firstMatch(remaining);
+    if (m != null) return '"${m.group(1)}"';
+
+    m = RegExp(r"^'([^']*)'").firstMatch(remaining);
+    if (m != null) return "'${m.group(1)}'";
+
+    m = RegExp(r'^(\w+(?:\.\w+)*)').firstMatch(remaining);
+    if (m != null) return m.group(1)!;
+
+    final end = (pos + 30).clamp(0, content.length);
+    return content.substring(pos, end).replaceAll('\n', ' ').trim();
   }
 
   // ---------------------------------------------------------------------------
