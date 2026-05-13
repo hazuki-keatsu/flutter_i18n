@@ -471,8 +471,15 @@ class UnusedAction extends AbstractAction {
       final toDelete = fileDefined.intersection(unusedKeys);
       if (toDelete.isEmpty) continue;
 
-      MessagePrinter.info('  ${file.path}: removing ${toDelete.length} key(s)');
-      await cleaner.clear(file, toDelete);
+      final removed = await cleaner.clear(file, toDelete);
+      final parentCount = removed - toDelete.length;
+      if (parentCount > 0) {
+        MessagePrinter.info(
+            '  ${file.path}: removing ${toDelete.length} leaf key(s), $parentCount empty parent(s)');
+      } else {
+        MessagePrinter
+            .info('  ${file.path}: removing ${toDelete.length} key(s)');
+      }
     }
   }
 

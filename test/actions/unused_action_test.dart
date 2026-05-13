@@ -425,5 +425,221 @@ class Foo extends StatelessWidget {
       expect(r.usedKeys.keys, containsAll(['title', 'common.appName', 'home.welcome']));
       expect(r.unusedKeys, containsAll(['unusedKey', 'common.unusedCommonKey']));
     });
+
+    // -----------------------------------------------------------------------
+    // Upward recursive empty-parent cleanup — JSON
+    // -----------------------------------------------------------------------
+    test('JSON: removes empty parent after deleting only child', () async {
+      final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
+      try {
+        final i18nFile = File('${tmpDir.path}/en.json');
+        i18nFile.writeAsStringSync(json.encode({
+          'label': {'unused': 'remove me'},
+        }));
+        File('${tmpDir.path}/main.dart').writeAsStringSync('''
+import 'package:flutter/material.dart';
+import 'package:flutter_i18n/flutter_i18n.dart';
+class Foo extends StatelessWidget {
+  Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "other"));
+}
+''');
+        await UnusedAction().analyze([
+          '--asset=${tmpDir.path}',
+          '--code=${tmpDir.path}',
+          '--auto-clear',
+        ]);
+        final result = json.decode(i18nFile.readAsStringSync());
+        expect(result.containsKey('label'), isFalse);
+      } finally {
+        tmpDir.deleteSync(recursive: true);
+      }
+    });
+
+    test('JSON: recursively removes empty ancestors up to root', () async {
+      final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
+      try {
+        final i18nFile = File('${tmpDir.path}/en.json');
+        i18nFile.writeAsStringSync(json.encode({
+          'a': {
+            'b': {'c': 'unused'},
+          },
+        }));
+        File('${tmpDir.path}/main.dart').writeAsStringSync('''
+import 'package:flutter/material.dart';
+import 'package:flutter_i18n/flutter_i18n.dart';
+class Foo extends StatelessWidget {
+  Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "other"));
+}
+''');
+        await UnusedAction().analyze([
+          '--asset=${tmpDir.path}',
+          '--code=${tmpDir.path}',
+          '--auto-clear',
+        ]);
+        final result = json.decode(i18nFile.readAsStringSync());
+        expect(result.containsKey('a'), isFalse);
+      } finally {
+        tmpDir.deleteSync(recursive: true);
+      }
+    });
+
+    test('JSON: keeps parent when sibling is still used', () async {
+      final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
+      try {
+        final i18nFile = File('${tmpDir.path}/en.json');
+        i18nFile.writeAsStringSync(json.encode({
+          'group': {
+            'keep': 'used',
+            'unused': 'remove me',
+          },
+        }));
+        File('${tmpDir.path}/main.dart').writeAsStringSync('''
+import 'package:flutter/material.dart';
+import 'package:flutter_i18n/flutter_i18n.dart';
+class Foo extends StatelessWidget {
+  Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "group.keep"));
+}
+''');
+        await UnusedAction().analyze([
+          '--asset=${tmpDir.path}',
+          '--code=${tmpDir.path}',
+          '--auto-clear',
+        ]);
+        final result = json.decode(i18nFile.readAsStringSync());
+        expect(result.containsKey('group'), isTrue);
+        expect(result['group'].containsKey('keep'), isTrue);
+        expect(result['group'].containsKey('unused'), isFalse);
+      } finally {
+        tmpDir.deleteSync(recursive: true);
+      }
+    });
+
+    // -----------------------------------------------------------------------
+    // Upward recursive empty-parent cleanup — YAML
+    // -----------------------------------------------------------------------
+    test('YAML: removes empty parent keys recursively', () async {
+      final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
+      try {
+        final i18nFile = File('${tmpDir.path}/en.yaml');
+        i18nFile.writeAsStringSync(''
+            'group:\n'
+            '  subgroup:\n'
+            '    unused: "remove me"\n'
+            'other: "keep"\n');
+        File('${tmpDir.path}/main.dart').writeAsStringSync('''
+import 'package:flutter/material.dart';
+import 'package:flutter_i18n/flutter_i18n.dart';
+class Foo extends StatelessWidget {
+  Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "other"));
+}
+''');
+        await UnusedAction().analyze([
+          '--asset=${tmpDir.path}',
+          '--code=${tmpDir.path}',
+          '--auto-clear',
+        ]);
+        final content = i18nFile.readAsStringSync();
+        expect(content.contains('group'), isFalse);
+        expect(content.contains('subgroup'), isFalse);
+        expect(content.contains('unused'), isFalse);
+        expect(content.contains('other'), isTrue);
+      } finally {
+        tmpDir.deleteSync(recursive: true);
+      }
+    });
+
+    test('YAML: keeps parent when sibling remains', () async {
+      final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
+      try {
+        final i18nFile = File('${tmpDir.path}/en.yaml');
+        i18nFile.writeAsStringSync(''
+            'group:\n'
+            '  keep: "used"\n'
+            '  unused: "remove me"\n');
+        File('${tmpDir.path}/main.dart').writeAsStringSync('''
+import 'package:flutter/material.dart';
+import 'package:flutter_i18n/flutter_i18n.dart';
+class Foo extends StatelessWidget {
+  Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "group.keep"));
+}
+''');
+        await UnusedAction().analyze([
+          '--asset=${tmpDir.path}',
+          '--code=${tmpDir.path}',
+          '--auto-clear',
+        ]);
+        final content = i18nFile.readAsStringSync();
+        expect(content.contains('group:'), isTrue);
+        expect(content.contains('keep'), isTrue);
+        expect(content.contains('unused'), isFalse);
+      } finally {
+        tmpDir.deleteSync(recursive: true);
+      }
+    });
+
+    // -----------------------------------------------------------------------
+    // Upward recursive empty-parent cleanup — XML
+    // -----------------------------------------------------------------------
+    test('XML: removes empty parent elements recursively', () async {
+      final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
+      try {
+        final i18nFile = File('${tmpDir.path}/en.xml');
+        i18nFile.writeAsStringSync(
+            '<root><group><child>unused</child></group><keep>used</keep></root>');
+        File('${tmpDir.path}/main.dart').writeAsStringSync('''
+import 'package:flutter/material.dart';
+import 'package:flutter_i18n/flutter_i18n.dart';
+class Foo extends StatelessWidget {
+  Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "keep"));
+}
+''');
+        await UnusedAction().analyze([
+          '--asset=${tmpDir.path}',
+          '--code=${tmpDir.path}',
+          '--auto-clear',
+        ]);
+        final content = i18nFile.readAsStringSync();
+        expect(content.contains('group'), isFalse);
+        expect(content.contains('child'), isFalse);
+        expect(content.contains('keep'), isTrue);
+      } finally {
+        tmpDir.deleteSync(recursive: true);
+      }
+    });
+
+    // -----------------------------------------------------------------------
+    // Upward recursive empty-parent cleanup — TOML
+    // -----------------------------------------------------------------------
+    test('TOML: removes empty parent sections recursively', () async {
+      final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
+      try {
+        final i18nFile = File('${tmpDir.path}/en.toml');
+        i18nFile.writeAsStringSync(''
+            '[group]\n'
+            'unused = "remove me"\n'
+            '\n'
+            '[other]\n'
+            'keep = "stay"\n');
+        File('${tmpDir.path}/main.dart').writeAsStringSync('''
+import 'package:flutter/material.dart';
+import 'package:flutter_i18n/flutter_i18n.dart';
+class Foo extends StatelessWidget {
+  Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "other.keep"));
+}
+''');
+        await UnusedAction().analyze([
+          '--asset=${tmpDir.path}',
+          '--code=${tmpDir.path}',
+          '--auto-clear',
+        ]);
+        final content = i18nFile.readAsStringSync();
+        expect(content.contains('[group]'), isFalse);
+        expect(content.contains('unused'), isFalse);
+        expect(content.contains('[other]'), isTrue);
+        expect(content.contains('keep'), isTrue);
+      } finally {
+        tmpDir.deleteSync(recursive: true);
+      }
+    });
   });
 }
