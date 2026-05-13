@@ -1,9 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_i18n/utils/message_printer.dart';
 import 'package:toml/toml.dart';
-import 'package:yaml/yaml.dart';
 
 /// Deletes unused keys from translation files, preserving formatting.
 ///

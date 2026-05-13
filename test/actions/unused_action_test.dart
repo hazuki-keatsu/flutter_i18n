@@ -711,5 +711,37 @@ class Foo extends StatelessWidget {
         tmpDir.deleteSync(recursive: true);
       }
     });
+
+    // -----------------------------------------------------------------------
+    // Namespace auto-clear
+    // -----------------------------------------------------------------------
+    test('auto-clear strips namespace prefix before deleting', () async {
+      final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
+      try {
+        final localeDir = Directory('${tmpDir.path}/en')..createSync();
+        final i18nFile = File('${localeDir.path}/common.json');
+        i18nFile.writeAsStringSync(json.encode({
+          'appName': 'My App',
+          'unusedKey': 'remove me',
+        }));
+        File('${tmpDir.path}/main.dart').writeAsStringSync('''
+import 'package:flutter/material.dart';
+import 'package:flutter_i18n/flutter_i18n.dart';
+class Foo extends StatelessWidget {
+  Widget build(BuildContext c) => Text(FlutterI18n.translate(c, "common.appName"));
+}
+''');
+        await UnusedAction().analyze([
+          '--asset=${tmpDir.path}',
+          '--code=${tmpDir.path}',
+          '--auto-clear',
+        ]);
+        final result = json.decode(i18nFile.readAsStringSync());
+        expect(result.containsKey('appName'), isTrue);
+        expect(result.containsKey('unusedKey'), isFalse);
+      } finally {
+        tmpDir.deleteSync(recursive: true);
+      }
+    });
   });
 }

@@ -222,17 +222,17 @@ class UnusedAction extends AbstractAction {
   // Pre-compiled regex patterns
   // ---------------------------------------------------------------------------
 
-  static final _importRe = RegExp(
-      r"""import\s+['"]package:flutter_i18n/flutter_i18n\.dart['"]"""
-      r'(?:\s+as\s+(\w+))?'
-      r'(?:\s+(?:show|hide)\s+([^;]+?))?'
-      r'\s*;');
+  static final _importRe =
+      RegExp(r"""import\s+['"]package:flutter_i18n/flutter_i18n\.dart['"]"""
+          r'(?:\s+as\s+(\w+))?'
+          r'(?:\s+(?:show|hide)\s+([^;]+?))?'
+          r'\s*;');
 
   static final _constRe = RegExp(
       "(?:static\\s+)?(?:const|final)\\s+String\\s+(\\w+)\\s*=\\s*['\"]([^'\"]+)['\"]");
 
-  static final _fallbackKeyRe = RegExp(
-      "fallbackKey:\\s*'([^']+)'|fallbackKey:\\s*\"([^\"]+)\"");
+  static final _fallbackKeyRe =
+      RegExp("fallbackKey:\\s*'([^']+)'|fallbackKey:\\s*\"([^\"]+)\"");
 
   static final _singleQuoteRe = RegExp(r"^'([^'\\]*(?:\\.[^'\\]*)*)'");
   static final _doubleQuoteRe = RegExp(r'^"([^"\\\$]*(?:\\.[^"\\]*)*)"');
@@ -255,8 +255,8 @@ class UnusedAction extends AbstractAction {
       final importInfo = _parseImport(content);
       if (importInfo == null) {
         if (_verbose) {
-          MessagePrinter
-              .debug('${file.path} — no flutter_i18n import, skipped');
+          MessagePrinter.debug(
+              '${file.path} — no flutter_i18n import, skipped');
         }
         continue;
       }
@@ -268,17 +268,38 @@ class UnusedAction extends AbstractAction {
       final alias = importInfo.alias;
 
       // translate → 2nd arg → usedKeys
-      _matchCall(content, alias != null ? '$alias.FlutterI18n.translate' : 'FlutterI18n.translate',
-          path, skipFirst: true, usedKeys: usedKeys, uncheckable: uncheckable, constMap: constMap);
+      _matchCall(
+          content,
+          alias != null
+              ? '$alias.FlutterI18n.translate'
+              : 'FlutterI18n.translate',
+          path,
+          skipFirst: true,
+          usedKeys: usedKeys,
+          uncheckable: uncheckable,
+          constMap: constMap);
       // plural → 2nd arg → pluralStems
-      _matchCall(content, alias != null ? '$alias.FlutterI18n.plural' : 'FlutterI18n.plural',
-          path, skipFirst: true, pluralStems: pluralStems, uncheckable: uncheckable, constMap: constMap);
+      _matchCall(
+          content,
+          alias != null ? '$alias.FlutterI18n.plural' : 'FlutterI18n.plural',
+          path,
+          skipFirst: true,
+          pluralStems: pluralStems,
+          uncheckable: uncheckable,
+          constMap: constMap);
       // I18nText → 1st arg → usedKeys
-      _matchCall(content, alias != null ? '$alias.I18nText' : 'I18nText',
-          path, skipFirst: false, usedKeys: usedKeys, uncheckable: uncheckable, constMap: constMap);
+      _matchCall(content, alias != null ? '$alias.I18nText' : 'I18nText', path,
+          skipFirst: false,
+          usedKeys: usedKeys,
+          uncheckable: uncheckable,
+          constMap: constMap);
       // I18nPlural → 1st arg → pluralStems
-      _matchCall(content, alias != null ? '$alias.I18nPlural' : 'I18nPlural',
-          path, skipFirst: false, pluralStems: pluralStems, uncheckable: uncheckable, constMap: constMap);
+      _matchCall(
+          content, alias != null ? '$alias.I18nPlural' : 'I18nPlural', path,
+          skipFirst: false,
+          pluralStems: pluralStems,
+          uncheckable: uncheckable,
+          constMap: constMap);
 
       _matchFallbackKey(content, path, usedKeys);
     }
@@ -319,18 +340,17 @@ class UnusedAction extends AbstractAction {
   /// When [skipFirst] is true, the key is the second positional arg; otherwise
   /// the first. Results go to [usedKeys], [pluralStems], or [uncheckable].
   void _matchCall(
-      final String content,
-      final String target,
-      final String filePath, {
-      required final bool skipFirst,
-      Map<String, Set<String>>? usedKeys,
-      Set<String>? pluralStems,
-      required final List<UnresolvedRef> uncheckable,
-      required final Map<String, String> constMap,
-      }) {
-    final pattern = skipFirst
-        ? '$target\\s*\\(\\s*[^,]+,\\s*'
-        : '$target\\s*\\(\\s*';
+    final String content,
+    final String target,
+    final String filePath, {
+    required final bool skipFirst,
+    Map<String, Set<String>>? usedKeys,
+    Set<String>? pluralStems,
+    required final List<UnresolvedRef> uncheckable,
+    required final Map<String, String> constMap,
+  }) {
+    final pattern =
+        skipFirst ? '$target\\s*\\(\\s*[^,]+,\\s*' : '$target\\s*\\(\\s*';
     final re = RegExp(pattern);
     for (final match in re.allMatches(content)) {
       final start = match.end;
@@ -362,8 +382,8 @@ class UnusedAction extends AbstractAction {
   // Argument extraction
   // ---------------------------------------------------------------------------
 
-  String? _extractStringArg(final String content, final int pos,
-      final Map<String, String> constMap) {
+  String? _extractStringArg(
+      final String content, final int pos, final Map<String, String> constMap) {
     final remaining = content.substring(pos);
 
     // Single-quoted string
@@ -435,15 +455,17 @@ class UnusedAction extends AbstractAction {
   // ---------------------------------------------------------------------------
 
   void _report(final AnalysisResult r) {
-    if (r.unusedKeys.isEmpty && r.missingKeys.isEmpty && r.uncheckable.isEmpty) {
-      MessagePrinter
-          .info('All ${r.totalDefined} key(s) are used. No unused keys found.');
+    if (r.unusedKeys.isEmpty &&
+        r.missingKeys.isEmpty &&
+        r.uncheckable.isEmpty) {
+      MessagePrinter.info(
+          'All ${r.totalDefined} key(s) are used. No unused keys found.');
       return;
     }
 
     if (r.missingKeys.isNotEmpty) {
-      MessagePrinter
-          .info('\n--- Missing Translation Keys (${r.missingKeys.length}) ---');
+      MessagePrinter.info(
+          '\n--- Missing Translation Keys (${r.missingKeys.length}) ---');
       for (final entry in r.missingKeys.entries) {
         for (final file in entry.value) {
           MessagePrinter.info('  ${entry.key}  ← $file');
@@ -458,8 +480,8 @@ class UnusedAction extends AbstractAction {
         if (fileUnused.isNotEmpty) unusedByFile[entry.key] = fileUnused;
       }
 
-      MessagePrinter
-          .info('\n--- Unused Translation Keys (${r.unusedKeys.length}) ---');
+      MessagePrinter.info(
+          '\n--- Unused Translation Keys (${r.unusedKeys.length}) ---');
       for (final entry in unusedByFile.entries) {
         for (final key in entry.value) {
           MessagePrinter.info('  $key  ← ${entry.key}');
@@ -487,7 +509,8 @@ class UnusedAction extends AbstractAction {
   // Phase 4 — auto-clear
   // ---------------------------------------------------------------------------
 
-  Future<void> _clear(final List<FileSystemEntity> assetsContent,
+  Future<void> _clear(
+      final List<FileSystemEntity> assetsContent,
       final Map<String, Set<String>> definedKeys,
       final Set<String> unusedKeys) async {
     MessagePrinter.info('\nAuto-clearing unused keys...');
@@ -496,8 +519,17 @@ class UnusedAction extends AbstractAction {
     for (final entity in assetsContent) {
       final file = entity is File ? entity : File(entity.path);
       final fileDefined = definedKeys[file.path] ?? {};
-      final toDelete = fileDefined.intersection(unusedKeys);
-      if (toDelete.isEmpty) continue;
+      final toDeleteRaw = fileDefined.intersection(unusedKeys);
+      if (toDeleteRaw.isEmpty) continue;
+
+      final namespace = _detectNamespace(file.path);
+      final toDelete = namespace != null
+          ? toDeleteRaw
+              .map((k) => k.startsWith('$namespace.')
+                  ? k.substring(namespace.length + 1)
+                  : k)
+              .toSet()
+          : toDeleteRaw;
 
       final removed = await cleaner.clear(file, toDelete);
       final parentCount = removed - toDelete.length;
@@ -505,16 +537,14 @@ class UnusedAction extends AbstractAction {
         MessagePrinter.info(
             '  ${file.path}: removing ${toDelete.length} leaf key(s), $parentCount empty parent(s)');
       } else {
-        MessagePrinter
-            .info('  ${file.path}: removing ${toDelete.length} key(s)');
+        MessagePrinter.info(
+            '  ${file.path}: removing ${toDelete.length} key(s)');
       }
     }
   }
 
-  void _printForceChecklist(
-      final List<FileSystemEntity> assetsContent,
-      final Map<String, Set<String>> definedKeys,
-      final AnalysisResult result) {
+  void _printForceChecklist(final List<FileSystemEntity> assetsContent,
+      final Map<String, Set<String>> definedKeys, final AnalysisResult result) {
     MessagePrinter.info('\n--- Deleted Keys (${result.unusedKeys.length}) ---');
     final unusedByFile = <String, Set<String>>{};
     for (final entry in definedKeys.entries) {
