@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <title>测试应用</title>
+  <label>
+    <main>你好 {user}！</main>
+    <confirmDelete>确定要删除此项吗？</confirmDelete>
+  </label>
+  <button>
+    <clickMe>点击这里</clickMe>
+    <label>
+      <save>保存更改</save>
+      <discard>丢弃</discard>
+    </label>
+  </button>
+  <errors>
+    <_404>
+      <title>页面未找到</title>
+    </_404>
+  </errors>
+  <unusedXmlKey>未使用的键</unusedXmlKey>
+</root>

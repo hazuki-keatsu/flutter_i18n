@@ -1,0 +1,8 @@
+[errors]
+"404" = { title = "Page not found", description = "The page you are looking for does not exist." }
+"500" = { title = "Server error" }
+
+[button]
+clickMe = "Click here"
+label = { save = "Save changes", discard = "Discard" }
+unusedTomlKey = "This key is not used"

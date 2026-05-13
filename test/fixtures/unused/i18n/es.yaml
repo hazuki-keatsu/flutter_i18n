@@ -1,0 +1,20 @@
+title: "Aplicación de prueba"
+label:
+  main: "¡Hola {user}!"
+  confirmDelete: "¿Seguro que quieres eliminar este elemento?"
+button:
+  clickMe: "Haga clic aquí"
+  label:
+    save: "Guardar cambios"
+    discard: "Descartar"
+errors:
+  404:
+    title: "Página no encontrada"
+    description: "La página que buscas no existe."
+  500:
+    title: "Error del servidor"
+unusedEsKey: "Esta clave no se usa en el código"
+clicked:
+  times-0: "Hiciste clic {times} veces!"
+  times-1: "Hiciste clic {time} vez!"
+  times-2: "Hiciste clic {times} veces!"

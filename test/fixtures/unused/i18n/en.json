@@ -1,0 +1,33 @@
+{
+  "title": "Test App",
+  "label": {
+    "main": "Hello {user}!",
+    "confirmDelete": "Are you sure you want to delete this item?"
+  },
+  "button": {
+    "clickMe": "Click here",
+    "label": {
+      "save": "Save changes",
+      "discard": "Discard"
+    }
+  },
+  "errors": {
+    "404": {
+      "title": "Page not found",
+      "description": "The page you are looking for does not exist."
+    },
+    "500": {
+      "title": "Server error"
+    }
+  },
+  "unusedKey": "This key is never referenced in code",
+  "alsoUnused": {
+    "nestedOne": "deeply nested unused",
+    "nestedTwo": "another unused"
+  },
+  "clicked": {
+    "times-0": "You clicked {times} times!",
+    "times-1": "You clicked {time} time!",
+    "times-2": "You clicked {times} times!"
+  }
+}
