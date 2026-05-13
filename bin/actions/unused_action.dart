@@ -91,8 +91,23 @@ class UnusedAction extends AbstractAction {
         _codePaths.add(arg.substring('--code='.length));
       } else if (arg == '--force') {
         _force = true;
+      } else if (arg == '--help') {
+        _displayHelpMessage();
       }
     }
+  }
+
+  void _displayHelpMessage() {
+    MessagePrinter.info(''
+        'Usage: dart run flutter_i18n unused [options]\n'
+        '\n'
+        'Options:\n'
+        '  --auto-clear    Delete unused keys from translation files\n'
+        '  --force         Force delete even with unresolvable references\n'
+        '  --verbose       Show per-key check status\n'
+        '  --asset=<path>  Path to translation assets (repeatable)\n'
+        '  --code=<path>   Path to Dart source code (repeatable)\n'
+        '  --help          Show this help message');
   }
 
   // ---------------------------------------------------------------------------
