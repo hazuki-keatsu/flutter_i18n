@@ -14,6 +14,7 @@ class UnusedAction extends AbstractAction {
 
   bool _autoClear = false;
   bool _verbose = false;
+  bool _force = false;
   final _assetPaths = <String>[];
   final _codePaths = <String>[];
 
@@ -58,7 +59,17 @@ class UnusedAction extends AbstractAction {
     _report(result);
 
     if (_autoClear && result.unusedKeys.isNotEmpty) {
-      await _clear(assetsContent, definedKeys, result.unusedKeys);
+      if (result.uncheckable.isNotEmpty && !_force) {
+        MessagePrinter.info(
+            '\n${result.uncheckable.length} unresolvable reference(s) detected.'
+            ' Use --force to auto-clear anyway, then verify deleted keys'
+            ' against the unresolvable list manually.');
+      } else {
+        await _clear(assetsContent, definedKeys, result.unusedKeys);
+        if (result.uncheckable.isNotEmpty && _force) {
+          _printForceChecklist(assetsContent, definedKeys, result);
+        }
+      }
     }
 
     return result;
@@ -78,6 +89,8 @@ class UnusedAction extends AbstractAction {
         _assetPaths.add(arg.substring('--asset='.length));
       } else if (arg.startsWith('--code=')) {
         _codePaths.add(arg.substring('--code='.length));
+      } else if (arg == '--force') {
+        _force = true;
       }
     }
   }
@@ -495,6 +508,30 @@ class UnusedAction extends AbstractAction {
         MessagePrinter
             .info('  ${file.path}: removing ${toDelete.length} key(s)');
       }
+    }
+  }
+
+  void _printForceChecklist(
+      final List<FileSystemEntity> assetsContent,
+      final Map<String, Set<String>> definedKeys,
+      final AnalysisResult result) {
+    MessagePrinter.info('\n--- Deleted Keys (${result.unusedKeys.length}) ---');
+    final unusedByFile = <String, Set<String>>{};
+    for (final entry in definedKeys.entries) {
+      final fileUnused = entry.value.intersection(result.unusedKeys);
+      if (fileUnused.isNotEmpty) unusedByFile[entry.key] = fileUnused;
+    }
+    for (final entry in unusedByFile.entries) {
+      for (final key in entry.value) {
+        MessagePrinter.info('  $key  ← ${entry.key}');
+      }
+    }
+
+    MessagePrinter.info(
+        '\n--- Unresolvable References (${result.uncheckable.length})'
+        ' — verify none of the above keys were used here ---');
+    for (final ref in result.uncheckable) {
+      MessagePrinter.info('  ${ref.filePath}:${ref.line}  ${ref.snippet}');
     }
   }
 

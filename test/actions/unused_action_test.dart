@@ -641,5 +641,75 @@ class Foo extends StatelessWidget {
         tmpDir.deleteSync(recursive: true);
       }
     });
+
+    // -----------------------------------------------------------------------
+    // --force gate when unresolvable references exist
+    // -----------------------------------------------------------------------
+    test('--auto-clear refuses when unresolvable exist and no --force',
+        () async {
+      final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
+      try {
+        final i18nFile = File('${tmpDir.path}/en.json');
+        i18nFile.writeAsStringSync(json.encode({
+          'used': 'ok',
+          'unused': 'should stay',
+        }));
+        File('${tmpDir.path}/main.dart').writeAsStringSync('''
+import 'package:flutter/material.dart';
+import 'package:flutter_i18n/flutter_i18n.dart';
+class Foo extends StatelessWidget {
+  Widget build(BuildContext c) {
+    final key = "used";
+    return Text(FlutterI18n.translate(c, key));
+  }
+}
+''');
+        await UnusedAction().analyze([
+          '--asset=${tmpDir.path}',
+          '--code=${tmpDir.path}',
+          '--auto-clear',
+        ]);
+        final result = json.decode(i18nFile.readAsStringSync());
+        expect(result.containsKey('unused'), isTrue);
+        expect(result.containsKey('used'), isTrue);
+      } finally {
+        tmpDir.deleteSync(recursive: true);
+      }
+    });
+
+    test('--auto-clear --force proceeds despite unresolvable', () async {
+      final tmpDir = Directory.systemTemp.createTempSync('flutter_i18n_test_');
+      try {
+        final i18nFile = File('${tmpDir.path}/en.json');
+        i18nFile.writeAsStringSync(json.encode({
+          'keep': 'ok',
+          'unused': 'remove me',
+        }));
+        File('${tmpDir.path}/main.dart').writeAsStringSync('''
+import 'package:flutter/material.dart';
+import 'package:flutter_i18n/flutter_i18n.dart';
+class Foo extends StatelessWidget {
+  Widget build(BuildContext c) {
+    final dynamicKey = c.toString();
+    return Column(children: [
+      Text(FlutterI18n.translate(c, "keep")),
+      Text(FlutterI18n.translate(c, dynamicKey)),
+    ]);
+  }
+}
+''');
+        await UnusedAction().analyze([
+          '--asset=${tmpDir.path}',
+          '--code=${tmpDir.path}',
+          '--auto-clear',
+          '--force',
+        ]);
+        final result = json.decode(i18nFile.readAsStringSync());
+        expect(result.containsKey('unused'), isFalse);
+        expect(result.containsKey('keep'), isTrue);
+      } finally {
+        tmpDir.deleteSync(recursive: true);
+      }
+    });
   });
 }
