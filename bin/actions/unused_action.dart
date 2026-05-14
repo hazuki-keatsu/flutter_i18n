@@ -203,9 +203,17 @@ class UnusedAction extends AbstractAction {
 
     for (final entity in assetsContent) {
       final file = entity is File ? entity : File(entity.path);
-      final map = await LocalLoader(file).loadContent();
+      Map<dynamic, dynamic>? map;
+      try {
+        map = await LocalLoader(file).loadContent();
+      } catch (e) {
+        MessagePrinter.error('Failed to decode ${file.path}: $e');
+        continue;
+      }
       if (map == null || map.isEmpty) {
-        MessagePrinter.error('Failed to decode ${file.path}');
+        if (_verbose) {
+          MessagePrinter.error('Empty content in ${file.path}');
+        }
         continue;
       }
 
@@ -225,11 +233,60 @@ class UnusedAction extends AbstractAction {
   String? _detectNamespace(final String filePath) {
     final parentDirName =
         File(filePath).parent.path.split(RegExp(r'[/\\]')).last;
-    if (RegExp(r'^[a-z]{2,3}$').hasMatch(parentDirName)) {
+    if (_isLanguageCode(parentDirName)) {
       return _basenameWithoutExtension(filePath);
     }
     return null;
   }
+
+  /// Check [name] against known ISO 639-1 codes, with optional `_`-separated
+  /// script and country suffixes (e.g. `en`, `zh_Hans`, `pt_BR`).
+  bool _isLanguageCode(final String name) {
+    final parts = name.split('_');
+    if (parts.isEmpty || !_knownLanguageCodes.contains(parts.first)) {
+      return false;
+    }
+    // Validate suffix segments: script (4 chars, upper-lower) or country (2 upper)
+    for (var i = 1; i < parts.length; i++) {
+      if (!RegExp(r'^[A-Z][a-z]{3}$').hasMatch(parts[i]) &&
+          !RegExp(r'^[A-Z]{2}$').hasMatch(parts[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static const _knownLanguageCodes = {
+    'aa', 'ab', 'ae', 'af', 'ak', 'am', 'an', 'ar', 'as', 'av', 'ay', 'az',
+    'ba', 'be', 'bg', 'bh', 'bi', 'bm', 'bn', 'bo', 'br', 'bs',
+    'ca', 'ce', 'ch', 'co', 'cr', 'cs', 'cu', 'cv', 'cy',
+    'da', 'de', 'dv', 'dz',
+    'ee', 'el', 'en', 'eo', 'es', 'et', 'eu',
+    'fa', 'ff', 'fi', 'fj', 'fo', 'fr', 'fy',
+    'ga', 'gd', 'gl', 'gn', 'gu', 'gv',
+    'ha', 'he', 'hi', 'ho', 'hr', 'ht', 'hu', 'hy', 'hz',
+    'ia', 'id', 'ie', 'ig', 'ii', 'ik', 'io', 'is', 'it', 'iu',
+    'ja', 'jv',
+    'ka', 'kg', 'ki', 'kj', 'kk', 'kl', 'km', 'kn', 'ko', 'kr', 'ks', 'ku',
+        'kv', 'kw', 'ky',
+    'la', 'lb', 'lg', 'li', 'ln', 'lo', 'lt', 'lu', 'lv',
+    'mg', 'mh', 'mi', 'mk', 'ml', 'mn', 'mr', 'ms', 'mt', 'my',
+    'na', 'nb', 'nd', 'ne', 'ng', 'nl', 'nn', 'no', 'nr', 'nv', 'ny',
+    'oc', 'oj', 'om', 'or', 'os',
+    'pa', 'pi', 'pl', 'ps', 'pt',
+    'qu',
+    'rm', 'rn', 'ro', 'ru', 'rw',
+    'sa', 'sc', 'sd', 'se', 'sg', 'si', 'sk', 'sl', 'sm', 'sn', 'so', 'sq',
+        'sr', 'ss', 'st', 'su', 'sv', 'sw',
+    'ta', 'te', 'tg', 'th', 'ti', 'tk', 'tl', 'tn', 'to', 'tr', 'ts', 'tt',
+        'tw', 'ty',
+    'ug', 'uk', 'ur', 'uz',
+    've', 'vi', 'vo',
+    'wa', 'wo',
+    'xh',
+    'yi', 'yo',
+    'za', 'zh', 'zu',
+  };
 
   void _flattenMap(final Map<dynamic, dynamic> map, final String? namespace,
       final String prefix, final Set<String> out) {
@@ -320,12 +377,7 @@ class UnusedAction extends AbstractAction {
       final toDeleteFull = fileKeys.fullKeys.intersection(unusedKeys);
       if (toDeleteFull.isEmpty) continue;
 
-      final ns = fileKeys.namespace;
-      final toDelete = ns != null
-          ? toDeleteFull
-              .map((k) => k.startsWith('$ns.') ? k.substring(ns.length + 1) : k)
-              .toSet()
-          : toDeleteFull;
+      final toDelete = toDeleteFull.map(fileKeys.toRawKey).toSet();
 
       final removed = await cleaner.clear(file, toDelete);
       final parentCount = removed - toDelete.length;

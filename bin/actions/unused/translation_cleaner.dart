@@ -1,25 +1,39 @@
 import 'dart:io';
 
-import 'cleaner_json.dart';
-import 'cleaner_toml.dart';
-import 'cleaner_xml.dart';
-import 'cleaner_yaml.dart';
-import 'format_cleaner.dart';
+import 'package:flutter_i18n/utils/message_printer.dart';
 
-/// Dispatches to a per-format [FormatCleaner] adapter based on file extension.
+import 'editor/translation_document.dart';
+
+/// Dispatches to a per-format [TranslationDocument] adapter based on file
+/// extension, preserving comments and formatting during key removal.
 class TranslationCleaner {
-  static final _cleaners = <String, FormatCleaner>{
-    'json': JsonCleaner(),
-    'yaml': YamlCleaner(),
-    'xml': XmlCleaner(),
-    'toml': TomlCleaner(),
-  };
+  static const _supported = {'json', 'yaml', 'yml', 'xml', 'toml'};
 
   /// Remove [keys] from [file]. Returns the number of keys removed.
   Future<int> clear(File file, Set<String> keys) async {
     final ext = file.path.split('.').last.toLowerCase();
-    final cleaner = _cleaners[ext];
-    if (cleaner == null) return 0;
-    return cleaner.clear(file, keys);
+    final format = ext == 'yml' ? 'yaml' : ext;
+    if (!_supported.contains(ext)) return 0;
+
+    try {
+      final content = await file.readAsString();
+      final doc = TranslationDocument.parse(content, format);
+
+      var removed = 0;
+      for (final key in keys) {
+        if (doc.remove(key.split('.'))) {
+          removed++;
+        }
+      }
+
+      if (removed > 0) {
+        await file.writeAsString(doc.serialize());
+      }
+
+      return removed;
+    } catch (e) {
+      MessagePrinter.error('Failed to clean ${file.path}: $e');
+      return 0;
+    }
   }
 }
