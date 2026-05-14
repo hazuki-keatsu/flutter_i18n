@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:args/args.dart';
 import 'package:flutter_i18n/utils/message_printer.dart';
 
 import 'action_interface.dart';
@@ -86,24 +87,38 @@ class UnusedAction extends AbstractAction {
   // CLI args
   // ---------------------------------------------------------------------------
 
+  static final ArgParser _argParser = () {
+    final parser = ArgParser();
+    parser.addFlag('auto-clear', negatable: false,
+        help: 'Delete unused keys from translation files');
+    parser.addFlag('verbose', negatable: false,
+        help: 'Show per-key check status');
+    parser.addFlag('force', negatable: false,
+        help: 'Force delete even with unresolvable references');
+    parser.addMultiOption('asset',
+        help: 'Path to translation assets (repeatable)');
+    parser.addMultiOption('code',
+        help: 'Path to Dart source code (repeatable)');
+    return parser;
+  }();
+
   void _parseArgs(final List<String> params) {
-    for (final arg in params) {
-      if (arg == '--auto-clear') {
-        _autoClear = true;
-      } else if (arg == '--verbose') {
-        _verbose = true;
-      } else if (arg.startsWith('--asset=')) {
-        final value = arg.substring('--asset='.length);
-        if (value.isNotEmpty) _assetPaths.add(value);
-      } else if (arg.startsWith('--code=')) {
-        final value = arg.substring('--code='.length);
-        if (value.isNotEmpty) _codePaths.add(value);
-      } else if (arg == '--force') {
-        _force = true;
-      } else if (arg == '--help') {
-        _displayHelpMessage();
-        exit(0);
-      }
+    if (params.any((a) => a == '--help' || a == '-h')) {
+      _displayHelpMessage();
+      exit(0);
+    }
+    try {
+      final args = _argParser.parse(params);
+      _autoClear = args['auto-clear'] as bool;
+      _verbose = args['verbose'] as bool;
+      _force = args['force'] as bool;
+      _assetPaths.addAll(args['asset'] as List<String>);
+      _codePaths.addAll(args['code'] as List<String>);
+    } on ArgParserException catch (e) {
+      MessagePrinter.error('${e.message}\n');
+      MessagePrinter.info('Usage: dart run flutter_i18n unused [options]\n');
+      MessagePrinter.info('Try --help for more information.');
+      exit(1);
     }
   }
 
