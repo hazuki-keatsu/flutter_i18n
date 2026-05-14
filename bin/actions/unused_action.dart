@@ -3,8 +3,9 @@ import 'dart:io';
 import 'package:flutter_i18n/utils/message_printer.dart';
 
 import 'action_interface.dart';
-import '../utils/local_loader.dart';
+
 import 'unused/analysis_result.dart';
+import 'unused/asset_collector.dart';
 import 'unused/dart_scanner.dart';
 import 'unused/file_keys.dart';
 import 'unused/translation_cleaner.dart';
@@ -17,7 +18,8 @@ class UnusedAction extends AbstractAction {
   bool _autoClear = false;
   bool _verbose = false;
 
-  /// If there are any unresolvable keys, AutoClear will be rejected, unless --force is added.
+  /// If there are any unresolvable keys, AutoClear will be rejected, unless
+  /// --force is added.
   bool _force = false;
   final _assetPaths = <String>[];
   final _codePaths = <String>[];
@@ -26,7 +28,6 @@ class UnusedAction extends AbstractAction {
   // Public API
   // ---------------------------------------------------------------------------
 
-  /// CLI entry point (fire-and-forget, matches [AbstractAction] contract).
   @override
   void executeAction(final List<String> params) {
     analyze(params);
@@ -47,7 +48,8 @@ class UnusedAction extends AbstractAction {
     }
     MessagePrinter.info('Found ${assetsContent.length} translation file(s).');
 
-    final definedKeys = await _collectDefinedKeys(assetsContent);
+    final collector = AssetCollector(verbose: _verbose);
+    final definedKeys = await collector.collectKeys(assetsContent);
 
     final dartFiles = _resolveCodePaths();
     MessagePrinter.info('Scanning ${dartFiles.length} Dart file(s).');
@@ -128,11 +130,12 @@ class UnusedAction extends AbstractAction {
   // ---------------------------------------------------------------------------
 
   Future<List<FileSystemEntity>> _resolveAssetPaths() async {
+    final collector = AssetCollector();
     if (_assetPaths.isNotEmpty) {
-      return _assetPaths.expand(_collectAssetFiles).toList();
+      return collector.collectFiles(_assetPaths);
     }
     final pubspecAssets = await retrieveAssetsFolders();
-    return pubspecAssets.expand(_collectAssetFiles).toList();
+    return collector.collectFiles(pubspecAssets);
   }
 
   List<File> _resolveCodePaths() {
@@ -140,27 +143,6 @@ class UnusedAction extends AbstractAction {
       return _codePaths.expand(_collectCodeFiles).toList();
     }
     return _collectDartFiles();
-  }
-
-  List<FileSystemEntity> _collectAssetFiles(final String path) {
-    final entity = FileSystemEntity.typeSync(path);
-    if (entity == FileSystemEntityType.file) {
-      final ext = path.split('.').last;
-      if (!acceptedExtensions.contains('.$ext')) {
-        MessagePrinter.error('Unsupported translation file format: $path');
-        return [];
-      }
-      return [File(path)];
-    }
-    if (entity == FileSystemEntityType.directory) {
-      return Directory(path)
-          .listSync(recursive: true)
-          .whereType<File>()
-          .where((f) => acceptedExtensions.any((ext) => f.path.endsWith(ext)))
-          .toList();
-    }
-    MessagePrinter.error('Asset path not found: $path');
-    return [];
   }
 
   List<File> _collectCodeFiles(final String path) {
@@ -194,116 +176,6 @@ class UnusedAction extends AbstractAction {
   }
 
   // ---------------------------------------------------------------------------
-  // Phase 1 — collect defined keys
-  // ---------------------------------------------------------------------------
-
-  Future<Map<String, FileKeys>> _collectDefinedKeys(
-      final List<FileSystemEntity> assetsContent) async {
-    final result = <String, FileKeys>{};
-
-    for (final entity in assetsContent) {
-      final file = entity is File ? entity : File(entity.path);
-      Map<dynamic, dynamic>? map;
-      try {
-        map = await LocalLoader(file).loadContent();
-      } catch (e) {
-        MessagePrinter.error('Failed to decode ${file.path}: $e');
-        continue;
-      }
-      if (map == null || map.isEmpty) {
-        if (_verbose) {
-          MessagePrinter.error('Empty content in ${file.path}');
-        }
-        continue;
-      }
-
-      final namespace = _detectNamespace(file.path);
-      final keys = <String>{};
-      _flattenMap(map, namespace, '', keys);
-
-      if (_verbose) {
-        MessagePrinter.info('${file.path} → ${keys.length} key(s)');
-      }
-      result[file.path] = FileKeys(file.path, namespace, keys);
-    }
-
-    return result;
-  }
-
-  String? _detectNamespace(final String filePath) {
-    final parentDirName =
-        File(filePath).parent.path.split(RegExp(r'[/\\]')).last;
-    if (_isLanguageCode(parentDirName)) {
-      return _basenameWithoutExtension(filePath);
-    }
-    return null;
-  }
-
-  /// Check [name] against known ISO 639-1 codes, with optional `_`-separated
-  /// script and country suffixes (e.g. `en`, `zh_Hans`, `pt_BR`).
-  bool _isLanguageCode(final String name) {
-    final parts = name.split('_');
-    if (parts.isEmpty || !_knownLanguageCodes.contains(parts.first)) {
-      return false;
-    }
-    // Validate suffix segments: script (4 chars, upper-lower) or country (2 upper)
-    for (var i = 1; i < parts.length; i++) {
-      if (!RegExp(r'^[A-Z][a-z]{3}$').hasMatch(parts[i]) &&
-          !RegExp(r'^[A-Z]{2}$').hasMatch(parts[i])) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  static const _knownLanguageCodes = {
-    'aa', 'ab', 'ae', 'af', 'ak', 'am', 'an', 'ar', 'as', 'av', 'ay', 'az',
-    'ba', 'be', 'bg', 'bh', 'bi', 'bm', 'bn', 'bo', 'br', 'bs',
-    'ca', 'ce', 'ch', 'co', 'cr', 'cs', 'cu', 'cv', 'cy',
-    'da', 'de', 'dv', 'dz',
-    'ee', 'el', 'en', 'eo', 'es', 'et', 'eu',
-    'fa', 'ff', 'fi', 'fj', 'fo', 'fr', 'fy',
-    'ga', 'gd', 'gl', 'gn', 'gu', 'gv',
-    'ha', 'he', 'hi', 'ho', 'hr', 'ht', 'hu', 'hy', 'hz',
-    'ia', 'id', 'ie', 'ig', 'ii', 'ik', 'io', 'is', 'it', 'iu',
-    'ja', 'jv',
-    'ka', 'kg', 'ki', 'kj', 'kk', 'kl', 'km', 'kn', 'ko', 'kr', 'ks', 'ku',
-        'kv', 'kw', 'ky',
-    'la', 'lb', 'lg', 'li', 'ln', 'lo', 'lt', 'lu', 'lv',
-    'mg', 'mh', 'mi', 'mk', 'ml', 'mn', 'mr', 'ms', 'mt', 'my',
-    'na', 'nb', 'nd', 'ne', 'ng', 'nl', 'nn', 'no', 'nr', 'nv', 'ny',
-    'oc', 'oj', 'om', 'or', 'os',
-    'pa', 'pi', 'pl', 'ps', 'pt',
-    'qu',
-    'rm', 'rn', 'ro', 'ru', 'rw',
-    'sa', 'sc', 'sd', 'se', 'sg', 'si', 'sk', 'sl', 'sm', 'sn', 'so', 'sq',
-        'sr', 'ss', 'st', 'su', 'sv', 'sw',
-    'ta', 'te', 'tg', 'th', 'ti', 'tk', 'tl', 'tn', 'to', 'tr', 'ts', 'tt',
-        'tw', 'ty',
-    'ug', 'uk', 'ur', 'uz',
-    've', 'vi', 'vo',
-    'wa', 'wo',
-    'xh',
-    'yi', 'yo',
-    'za', 'zh', 'zu',
-  };
-
-  void _flattenMap(final Map<dynamic, dynamic> map, final String? namespace,
-      final String prefix, final Set<String> out) {
-    for (final entry in map.entries) {
-      final key = entry.key.toString();
-      final fullKey = prefix.isEmpty ? key : '$prefix.$key';
-      final value = entry.value;
-      if (value is Map) {
-        _flattenMap(value, namespace, fullKey, out);
-      } else if (value is String) {
-        final finalKey = namespace != null ? '$namespace.$fullKey' : fullKey;
-        out.add(finalKey);
-      }
-    }
-  }
-
-  // ---------------------------------------------------------------------------
   // Report
   // ---------------------------------------------------------------------------
 
@@ -327,12 +199,7 @@ class UnusedAction extends AbstractAction {
     }
 
     if (r.unusedKeys.isNotEmpty) {
-      final unusedByFile = <String, Set<String>>{};
-      for (final entry in r.definedKeys.entries) {
-        final fileUnused = entry.value.fullKeys.intersection(r.unusedKeys);
-        if (fileUnused.isNotEmpty) unusedByFile[entry.key] = fileUnused;
-      }
-
+      final unusedByFile = _groupUnusedByFile(r);
       MessagePrinter.info(
           '\n--- Unused Translation Keys (${r.unusedKeys.length}) ---');
       for (final entry in unusedByFile.entries) {
@@ -394,11 +261,7 @@ class UnusedAction extends AbstractAction {
   void _printForceChecklist(final List<FileSystemEntity> assetsContent,
       final Map<String, FileKeys> definedKeys, final AnalysisResult result) {
     MessagePrinter.info('\n--- Deleted Keys (${result.unusedKeys.length}) ---');
-    final unusedByFile = <String, Set<String>>{};
-    for (final entry in definedKeys.entries) {
-      final fileUnused = entry.value.fullKeys.intersection(result.unusedKeys);
-      if (fileUnused.isNotEmpty) unusedByFile[entry.key] = fileUnused;
-    }
+    final unusedByFile = _groupUnusedByFile(result);
     for (final entry in unusedByFile.entries) {
       for (final key in entry.value) {
         MessagePrinter.info('  $key  ← ${entry.key}');
@@ -417,9 +280,12 @@ class UnusedAction extends AbstractAction {
   // Helpers
   // ---------------------------------------------------------------------------
 
-  String _basenameWithoutExtension(final String path) {
-    final name = path.split(RegExp(r'[/\\]')).last;
-    final dot = name.lastIndexOf('.');
-    return dot > 0 ? name.substring(0, dot) : name;
+  Map<String, Set<String>> _groupUnusedByFile(final AnalysisResult r) {
+    final unusedByFile = <String, Set<String>>{};
+    for (final entry in r.definedKeys.entries) {
+      final fileUnused = entry.value.fullKeys.intersection(r.unusedKeys);
+      if (fileUnused.isNotEmpty) unusedByFile[entry.key] = fileUnused;
+    }
+    return unusedByFile;
   }
 }

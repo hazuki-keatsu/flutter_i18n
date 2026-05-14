@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../bin/actions/unused/asset_collector.dart';
 import '../../bin/actions/unused_action.dart';
 
 const _fixture = 'test/fixtures/unused';
@@ -30,27 +31,6 @@ void main() {
           ]));
     });
 
-    test('finds single-quoted string keys', () async {
-      final r = await UnusedAction()
-          .analyze(['--asset=$_i18nDir', '--code=$_codeDir/main.dart']);
-      expect(r.usedKeys.keys, contains('label.confirmDelete'));
-      expect(r.usedKeys.keys, contains('errors.404.title'));
-    });
-
-    test('handles deeply nested keys', () async {
-      final r = await UnusedAction()
-          .analyze(['--asset=$_i18nDir', '--code=$_codeDir/main.dart']);
-      expect(r.usedKeys.keys, contains('button.label.save'));
-      expect(r.usedKeys.keys, contains('errors.404.description'));
-    });
-
-    test('handles keys containing numeric segments', () async {
-      final r = await UnusedAction()
-          .analyze(['--asset=$_i18nDir', '--code=$_codeDir/main.dart']);
-      expect(r.usedKeys.keys, contains('errors.404.title'));
-      expect(r.usedKeys.keys, contains('errors.500.title'));
-    });
-
     // -----------------------------------------------------------------------
     // Namespace layout
     // -----------------------------------------------------------------------
@@ -60,19 +40,7 @@ void main() {
         '--code=$_codeDir/with_alias.dart',
       ]);
       expect(r.usedKeys.keys, contains('common.appName'));
-      expect(r.unusedKeys, contains('common.appVersion'));
-      expect(r.unusedKeys, contains('common.unusedCommonKey'));
-    });
-
-    // -----------------------------------------------------------------------
-    // Import variants
-    // -----------------------------------------------------------------------
-    test('handles aliased import', () async {
-      final r = await UnusedAction().analyze([
-        '--asset=$_i18nNsDir',
-        '--code=$_codeDir/with_alias.dart',
-      ]);
-      expect(r.usedKeys.keys, contains('common.appName'));
+      expect(r.unusedKeys, containsAll(['common.appVersion', 'common.unusedCommonKey']));
     });
 
     test('handles show combinator', () async {
@@ -742,6 +710,88 @@ class Foo extends StatelessWidget {
       } finally {
         tmpDir.deleteSync(recursive: true);
       }
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // AssetCollector unit tests
+  // ---------------------------------------------------------------------------
+
+  group('AssetCollector', () {
+    group('flattenMap', () {
+      test('flat map', () {
+        final out = <String>{};
+        AssetCollector.flattenMap({'a': '1', 'b': '2'}, null, '', out);
+        expect(out, {'a', 'b'});
+      });
+
+      test('nested map', () {
+        final out = <String>{};
+        AssetCollector.flattenMap(
+            {'x': {'y': {'z': 'leaf'}}}, null, '', out);
+        expect(out, {'x.y.z'});
+      });
+
+      test('mixed nesting levels', () {
+        final out = <String>{};
+        AssetCollector.flattenMap({
+          'a': 'flat',
+          'b': {'c': 'nested', 'd': 'also'},
+        }, null, '', out);
+        expect(out, {'a', 'b.c', 'b.d'});
+      });
+
+      test('skips non-String leaf values', () {
+        final out = <String>{};
+        AssetCollector.flattenMap({
+          'a': 123,
+          'b': true,
+          'c': [1, 2, 3],
+          'd': 'valid',
+        }, null, '', out);
+        expect(out, {'d'});
+      });
+
+      test('applies namespace prefix', () {
+        final out = <String>{};
+        AssetCollector.flattenMap({'key': 'val'}, 'ns', '', out);
+        expect(out, {'ns.key'});
+      });
+
+      test('namespace with nested keys', () {
+        final out = <String>{};
+        AssetCollector.flattenMap(
+            {'p': {'q': 'val'}}, 'ns', '', out);
+        expect(out, {'ns.p.q'});
+      });
+    });
+
+    group('detectNamespace', () {
+      test('returns filename for language-code parent dir', () {
+        final ns = AssetCollector.detectNamespace('/assets/en/common.json');
+        expect(ns, 'common');
+      });
+
+      test('returns null for generic parent dir', () {
+        final ns = AssetCollector.detectNamespace('/assets/i18n/en.json');
+        expect(ns, isNull);
+      });
+
+      test('returns null for non-language parent like api', () {
+        final ns = AssetCollector.detectNamespace('/assets/api/config.json');
+        expect(ns, isNull);
+      });
+
+      test('handles region variant en_US', () {
+        final ns = AssetCollector.detectNamespace('/assets/en_US/home.json');
+        expect(ns, 'home');
+      });
+
+      test('handles script+country variant zh_Hans_CN', () {
+        final ns =
+            AssetCollector.detectNamespace('/assets/zh_Hans_CN/common.json');
+        expect(ns, 'common');
+      });
     });
   });
 }
