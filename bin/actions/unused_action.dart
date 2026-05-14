@@ -16,6 +16,8 @@ class UnusedAction extends AbstractAction {
 
   bool _autoClear = false;
   bool _verbose = false;
+
+  /// If there are any unresolvable keys, AutoClear will be rejected, unless --force is added.
   bool _force = false;
   final _assetPaths = <String>[];
   final _codePaths = <String>[];
@@ -27,7 +29,7 @@ class UnusedAction extends AbstractAction {
   /// CLI entry point (fire-and-forget, matches [AbstractAction] contract).
   @override
   void executeAction(final List<String> params) {
-    analyze(params); // microtask-driven; process won't exit until it completes
+    analyze(params);
   }
 
   /// Returns a structured result for programmatic use (tests, tooling).
@@ -113,7 +115,12 @@ class UnusedAction extends AbstractAction {
         '  --verbose       Show per-key check status\n'
         '  --asset=<path>  Path to translation assets (repeatable)\n'
         '  --code=<path>   Path to Dart source code (repeatable)\n'
-        '  --help          Show this help message');
+        '  --help          Show this help message'
+        '\n'
+        'Tips:\n'
+        '  --auto-clear    may damage the format of the translation files\n'
+        '  --force         is not recommended for using, unless the project under version controller and\n'
+        '                  you can ensure all the FlutterI18n call can be with non-variable value');
   }
 
   // ---------------------------------------------------------------------------
@@ -316,8 +323,7 @@ class UnusedAction extends AbstractAction {
       final ns = fileKeys.namespace;
       final toDelete = ns != null
           ? toDeleteFull
-              .map((k) =>
-                  k.startsWith('$ns.') ? k.substring(ns.length + 1) : k)
+              .map((k) => k.startsWith('$ns.') ? k.substring(ns.length + 1) : k)
               .toSet()
           : toDeleteFull;
 
