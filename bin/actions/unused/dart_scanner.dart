@@ -32,39 +32,46 @@ class DartScanner {
 
       final constMap = _collectConstDeclarations(content);
       final path = file.path;
-      final alias = importInfo.alias;
+      final info = importInfo;
+      final alias = info.alias;
 
       // translate → 2nd arg → usedKeys
-      _matchCall(
-          content,
-          alias != null ? '$alias.FlutterI18n.translate' : 'FlutterI18n.translate',
-          path,
-          skipFirst: true,
-          usedKeys: usedKeys,
-          uncheckable: uncheckable,
-          constMap: constMap);
-      // plural → 2nd arg → pluralStems
-      _matchCall(
-          content,
-          alias != null ? '$alias.FlutterI18n.plural' : 'FlutterI18n.plural',
-          path,
-          skipFirst: true,
-          pluralStems: pluralStems,
-          uncheckable: uncheckable,
-          constMap: constMap);
+      if (info.isApiAvailable('FlutterI18n')) {
+        _matchCall(
+            content,
+            alias != null ? '$alias.FlutterI18n.translate' : 'FlutterI18n.translate',
+            path,
+            skipFirst: true,
+            usedKeys: usedKeys,
+            uncheckable: uncheckable,
+            constMap: constMap);
+        // plural → 2nd arg → pluralStems
+        _matchCall(
+            content,
+            alias != null ? '$alias.FlutterI18n.plural' : 'FlutterI18n.plural',
+            path,
+            skipFirst: true,
+            pluralStems: pluralStems,
+            uncheckable: uncheckable,
+            constMap: constMap);
+      }
       // I18nText → 1st arg → usedKeys
-      _matchCall(content, alias != null ? '$alias.I18nText' : 'I18nText', path,
-          skipFirst: false,
-          usedKeys: usedKeys,
-          uncheckable: uncheckable,
-          constMap: constMap);
+      if (info.isApiAvailable('I18nText')) {
+        _matchCall(content, alias != null ? '$alias.I18nText' : 'I18nText', path,
+            skipFirst: false,
+            usedKeys: usedKeys,
+            uncheckable: uncheckable,
+            constMap: constMap);
+      }
       // I18nPlural → 1st arg → pluralStems
-      _matchCall(
-          content, alias != null ? '$alias.I18nPlural' : 'I18nPlural', path,
-          skipFirst: false,
-          pluralStems: pluralStems,
-          uncheckable: uncheckable,
-          constMap: constMap);
+      if (info.isApiAvailable('I18nPlural')) {
+        _matchCall(
+            content, alias != null ? '$alias.I18nPlural' : 'I18nPlural', path,
+            skipFirst: false,
+            pluralStems: pluralStems,
+            uncheckable: uncheckable,
+            constMap: constMap);
+      }
 
       _matchFallbackKey(content, path, usedKeys);
     }
@@ -79,7 +86,7 @@ class DartScanner {
   static final _importRe =
       RegExp(r"""import\s+['"]package:flutter_i18n/flutter_i18n\.dart['"]"""
           r'(?:\s+as\s+(\w+))?'
-          r'(?:\s+(?:show|hide)\s+([^;]+?))?'
+          r'(?:\s+(show|hide)\s+([^;]+?))?'
           r'\s*;');
 
   static final _constRe = RegExp(
@@ -103,12 +110,14 @@ class DartScanner {
     if (match == null) return null;
 
     final alias = match.group(1);
-    final shownRaw = match.group(2);
-    final shown = shownRaw != null
-        ? shownRaw.split(',').map((s) => s.trim()).toSet()
+    final keyword = match.group(2); // 'show' or 'hide'
+    final namesRaw = match.group(3);
+    final isShow = keyword == null || keyword == 'show';
+    final names = namesRaw != null
+        ? namesRaw.split(',').map((s) => s.trim()).toSet()
         : <String>{};
 
-    return _ImportInfo(alias: alias, shownNames: shown);
+    return _ImportInfo(alias: alias, isShow: isShow, names: names);
   }
 
   Map<String, String> _collectConstDeclarations(final String content) {
@@ -240,8 +249,15 @@ class DartScanner {
 
 class _ImportInfo {
   final String? alias;
-  final Set<String> shownNames;
-  _ImportInfo({this.alias, this.shownNames = const {}});
+  final bool isShow;
+  final Set<String> names;
+  _ImportInfo({this.alias, this.isShow = true, this.names = const {}});
+
+  bool isApiAvailable(String symbol) {
+    if (names.isEmpty) return true;
+    if (isShow) return names.contains(symbol);
+    return !names.contains(symbol);
+  }
 }
 
 /// Result of scanning Dart source files for translation key usage.

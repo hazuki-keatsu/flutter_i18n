@@ -15,7 +15,7 @@ class TomlCleaner extends FormatCleaner {
       final leafKey = key.split('.').last;
       for (var i = 0; i < lines.length; i++) {
         final trimmed = lines[i].trim();
-        if (trimmed.startsWith('$leafKey ') || trimmed.startsWith('$leafKey=')) {
+        if (RegExp('^${RegExp.escape(leafKey)}\\s*=').hasMatch(trimmed)) {
           toRemove.add(i);
         }
       }

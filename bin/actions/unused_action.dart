@@ -89,13 +89,16 @@ class UnusedAction extends AbstractAction {
       } else if (arg == '--verbose') {
         _verbose = true;
       } else if (arg.startsWith('--asset=')) {
-        _assetPaths.add(arg.substring('--asset='.length));
+        final value = arg.substring('--asset='.length);
+        if (value.isNotEmpty) _assetPaths.add(value);
       } else if (arg.startsWith('--code=')) {
-        _codePaths.add(arg.substring('--code='.length));
+        final value = arg.substring('--code='.length);
+        if (value.isNotEmpty) _codePaths.add(value);
       } else if (arg == '--force') {
         _force = true;
       } else if (arg == '--help') {
         _displayHelpMessage();
+        exit(0);
       }
     }
   }

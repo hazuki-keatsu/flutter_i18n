@@ -26,7 +26,7 @@ class XmlCleaner extends FormatCleaner {
     while (changed) {
       changed = false;
       final previous = content;
-      content = content.replaceAll(RegExp(r'<(\w+)>\s*</\1>'), '');
+      content = content.replaceAll(RegExp(r'<(\w+)[^>]*>\s*</\1>'), '');
       if (content != previous) {
         changed = true;
         count++;

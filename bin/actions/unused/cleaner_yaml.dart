@@ -7,10 +7,11 @@ class YamlCleaner extends FormatCleaner {
   Future<int> clear(File file, Set<String> keys) async {
     final lines = await file.readAsLines();
     final toRemove = <int>{};
+    final indentUnit = _detectIndentUnit(lines);
 
     // Phase 1: Delete leaf keys
     for (final key in keys) {
-      _markKeyLine(lines, key.split('.'), toRemove);
+      _markKeyLine(lines, key.split('.'), indentUnit, toRemove);
     }
 
     // Phase 2: Iteratively delete empty parent keys
@@ -65,13 +66,30 @@ class YamlCleaner extends FormatCleaner {
     }
   }
 
-  void _markKeyLine(
-      List<String> lines, List<String> keyParts, Set<int> toRemove) {
-    final lineNum = _findKeyLineNumber(lines, keyParts);
+  int _detectIndentUnit(List<String> lines) {
+    for (var i = 0; i < lines.length - 1; i++) {
+      final parentIndent = lines[i].length - lines[i].trimLeft().length;
+      final trimmed = lines[i].trimLeft();
+      if (trimmed.isEmpty || trimmed.startsWith('#') || !trimmed.endsWith(':')) continue;
+      for (var j = i + 1; j < lines.length; j++) {
+        final childIndent = lines[j].length - lines[j].trimLeft().length;
+        if (childIndent <= parentIndent) continue;
+        final ct = lines[j].trimLeft();
+        if (ct.isEmpty || ct.startsWith('#')) continue;
+        return childIndent - parentIndent;
+      }
+    }
+    return 2;
+  }
+
+  void _markKeyLine(List<String> lines, List<String> keyParts, int indentUnit,
+      Set<int> toRemove) {
+    final lineNum = _findKeyLineNumber(lines, keyParts, indentUnit);
     if (lineNum >= 0) toRemove.add(lineNum);
   }
 
-  int _findKeyLineNumber(List<String> lines, List<String> keyParts) {
+  int _findKeyLineNumber(
+      List<String> lines, List<String> keyParts, int indentUnit) {
     if (keyParts.isEmpty) return -1;
     var depth = 0;
     for (var i = 0; i < lines.length; i++) {
@@ -89,7 +107,7 @@ class YamlCleaner extends FormatCleaner {
         continue;
       }
 
-      final expectedMinIndent = depth * 2;
+      final expectedMinIndent = depth * indentUnit;
       if (indent < expectedMinIndent && depth > 0) return -1;
     }
     return -1;
