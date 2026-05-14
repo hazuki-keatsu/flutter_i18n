@@ -5,4 +5,5 @@
 [button]
 clickMe = "Click here"
 label = { save = "Save changes", discard = "Discard" }
+# This is a comment
 unusedTomlKey = "This key is not used"

@@ -13,6 +13,7 @@ errors:
     description: "La página que buscas no existe."
   500:
     title: "Error del servidor"
+# This is a comment
 unusedEsKey: "Esta clave no se usa en el código"
 clicked:
   times-0: "Hiciste clic {times} veces!"

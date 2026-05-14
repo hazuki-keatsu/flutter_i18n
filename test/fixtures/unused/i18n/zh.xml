@@ -17,5 +17,6 @@
       <title>页面未找到</title>
     </_404>
   </errors>
+  <!-- This is a comment -->
   <unusedXmlKey>未使用的键</unusedXmlKey>
 </root>

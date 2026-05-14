@@ -1,4 +1,5 @@
 welcome: "Welcome back!"
 greeting: "Hello, {name}!"
 seeMore: "See more"
+# This is a comment
 unusedHomeKey: "Never used"
