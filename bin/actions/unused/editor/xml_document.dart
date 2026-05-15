@@ -68,6 +68,7 @@ class XmlDocument implements TranslationDocument {
   void _correlate() {
     final tags = <_Tag>[];
     final pendingComments = <int>[];
+    final pendingCommentTags = <_Tag, List<int>>{};
     final openRe = RegExp(r'<([_a-zA-Z][\w\-]*)>');
     final closeRe = RegExp(r'</([_a-zA-Z][\w\-]*)>');
     final selfCloseRe = RegExp(r'<([_a-zA-Z][\w\-]*)/>');
@@ -136,12 +137,12 @@ class XmlDocument implements TranslationDocument {
         pos += lt;
       }
 
-      // Attach pending comments to this line's tag
+      // Attach pending comments to this line's tag (deferred — _positions
+      // won't be populated until walkAssign in step 2).
       if (foundTag && pendingComments.isNotEmpty) {
         for (var j = tags.length - 1; j >= 0; j--) {
           if (tags[j].startLine == i) {
-            final path = _pathByPosition(tags[j], tags);
-            _commentLinesForPath[path] = List.of(pendingComments);
+            pendingCommentTags[tags[j]] = List.of(pendingComments);
             break;
           }
         }
@@ -167,28 +168,19 @@ class XmlDocument implements TranslationDocument {
     }
 
     walkAssign(_dom.rootElement);
-  }
 
-  /// Find the full path for [tag] by looking up in [_positions] by position.
-  String _pathByPosition(_Tag tag, List<_Tag> allTags) {
-    for (final entry in _domIndex.entries) {
-      final span = _positions[entry.value];
-      if (span != null &&
-          span.startLine == tag.startLine &&
-          span.startCol == tag.startCol) {
-        return entry.key;
+    // 3) Resolve deferred comment attachments now that _positions is populated
+    for (final tag in pendingCommentTags.keys) {
+      for (final entry in _domIndex.entries) {
+        final span = _positions[entry.value];
+        if (span != null &&
+            span.startLine == tag.startLine &&
+            span.startCol == tag.startCol) {
+          _commentLinesForPath[entry.key] = pendingCommentTags[tag]!;
+          break;
+        }
       }
     }
-    // Fallback: walk up through unclosed tags
-    final parts = <String>[];
-    for (var j = allTags.indexOf(tag); j >= 0; j--) {
-      final t = allTags[j];
-      if (t.name == tag.name && t.startLine == tag.startLine) {
-        parts.add(t.name);
-        break;
-      }
-    }
-    return parts.reversed.join('.');
   }
 
   // ---------------------------------------------------------------------------
