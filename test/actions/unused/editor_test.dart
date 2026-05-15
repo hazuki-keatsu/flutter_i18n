@@ -229,6 +229,16 @@ void _tomlTests() {
       expect(out.contains('remove me'), isFalse);
     });
 
+    test('removes standalone comment with its attached key', () {
+      const src = '[a]\n# drop note\ndrop = "y"\nkeep = "x"\n';
+      final doc = TranslationDocument.parse(src, 'toml');
+      expect(doc.remove(['a', 'drop']), isTrue);
+      final out = doc.serialize();
+      expect(out.contains('drop note'), isFalse);
+      expect(out.contains('drop'), isFalse);
+      expect(out.contains('keep'), isTrue);
+    });
+
     test('returns false for non-existent path', () {
       const src = '[a]\nkey = "v"\n';
       final doc = TranslationDocument.parse(src, 'toml');
@@ -318,6 +328,40 @@ void _xmlTests() {
       expect(doc.remove(['root', 'a', 'b']), isTrue);
       final out = doc.serialize().replaceAll('\n', '');
       expect(out.contains('a'), isFalse);
+    });
+
+    test('removes standalone comment with its attached element', () {
+      const src =
+          '<root>\n  <!-- drop note -->\n  <drop>d</drop>\n  <keep>k</keep>\n</root>';
+      final doc = TranslationDocument.parse(src, 'xml');
+      expect(doc.remove(['drop']), isTrue);
+      final out = doc.serialize();
+      expect(out.contains('drop note'), isFalse);
+      expect(out.contains('<drop>'), isFalse);
+      expect(out.contains('keep'), isTrue);
+    });
+
+    test('preserves standalone comment when unrelated element removed', () {
+      const src =
+          '<root>\n  <!-- keep note -->\n  <keep>k</keep>\n  <drop>d</drop>\n</root>';
+      final doc = TranslationDocument.parse(src, 'xml');
+      expect(doc.remove(['drop']), isTrue);
+      final out = doc.serialize();
+      expect(out.contains('keep note'), isTrue);
+      expect(out.contains('<keep>'), isTrue);
+      expect(out.contains('<drop>'), isFalse);
+    });
+
+    test('removes comment lines with multi-line element', () {
+      const src =
+          '<root>\n  <!-- section header -->\n  <section>\n    <child>v</child>\n  </section>\n  <keep>k</keep>\n</root>';
+      final doc = TranslationDocument.parse(src, 'xml');
+      expect(doc.remove(['section']), isTrue);
+      final out = doc.serialize();
+      expect(out.contains('section header'), isFalse);
+      expect(out.contains('<section>'), isFalse);
+      expect(out.contains('<child>'), isFalse);
+      expect(out.contains('keep'), isTrue);
     });
   });
 }
