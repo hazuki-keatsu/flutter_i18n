@@ -286,6 +286,55 @@ This command is used to find the differences between the keys of the desired tra
 [flutter_i18n ERROR]: The compared dictionary doesn't contain the key >title
 ```
 
+#### Unused
+
+This command is used to find the unused or missing translation assets in translation files or dart files.
+
+```sh
+> flutter pub run flutter_i18n unused
+[flutter_i18n INFO]: Found 7 translation file(s).
+[flutter_i18n INFO]: YAML file loaded for en
+[flutter_i18n INFO]: XML file loaded for es
+[flutter_i18n INFO]: JSON file loaded for it
+[flutter_i18n INFO]: JSON file loaded for common
+[flutter_i18n INFO]: YAML file loaded for home
+[flutter_i18n INFO]: JSON file loaded for common
+[flutter_i18n INFO]: JSON file loaded for home
+[flutter_i18n INFO]: Scanning 5 Dart file(s).
+[flutter_i18n INFO]:
+--- Missing Translation Keys (4) ---
+[flutter_i18n INFO]:   button.label.clickMea  ← lib\basic_example.dart
+[flutter_i18n INFO]:   home.missing  ← lib\namespace_example.dart
+[flutter_i18n INFO]:   args.title  ← lib\network_example.dart
+[flutter_i18n INFO]:   args.content  ← lib\network_example.dart
+[flutter_i18n INFO]:
+--- Summary ---
+[flutter_i18n INFO]:   Defined:     26
+[flutter_i18n INFO]:   Used:        11
+[flutter_i18n INFO]:   Unused:      0
+[flutter_i18n INFO]:   Missing:     4
+[flutter_i18n INFO]:   Uncheckable: 0
+```
+
+You can get help with argument `--help`
+
+```sh
+> flutter pub run flutter_i18n unused --help
+[flutter_i18n INFO]: Usage: dart run flutter_i18n unused [options]
+
+Options:
+  --auto-clear    Delete unused keys from translation files
+  --force         Force delete even with unresolvable references
+  --verbose       Show per-key check status
+  --asset=<path>  Path to translation assets (repeatable)
+  --code=<path>   Path to Dart source code (repeatable)
+  --help          Show this help message
+Tips:
+  --auto-clear    may damage the format of the translation files
+  --force         is not recommended for using, unless the project under version controller and
+                  you can ensure all the FlutterI18n call can be with non-variable value
+```
+
 ## Plugins
 
 | Plugin | Description |
